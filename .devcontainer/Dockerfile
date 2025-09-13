@@ -4,7 +4,6 @@
 # ===============================
 
 # Base image: Python 3.12 + Node LTS preinstalled
-# This avoids long Node compilation and fixes askpass issues
 FROM mcr.microsoft.com/devcontainers/python:3.12-node
 
 # ===============================
@@ -16,7 +15,7 @@ ENV WORKSPACE=/workspace
 # ===============================
 # 1️⃣ Install system dependencies
 # ===============================
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     wget \
     gnupg \
@@ -32,8 +31,8 @@ RUN apt-get update && apt-get install -y \
 # 2️⃣ Install kubectl
 # ===============================
 RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
-    && chmod +x kubectl \
-    && mv kubectl /usr/local/bin/
+    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
+    && rm kubectl
 
 # ===============================
 # 3️⃣ Install Helm
@@ -43,7 +42,7 @@ RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | b
 # ===============================
 # 4️⃣ Upgrade pip (Python package manager)
 # ===============================
-RUN python -m pip install --upgrade pip
+RUN python -m pip install --upgrade pip setuptools wheel
 
 # ===============================
 # 5️⃣ Create project folders
@@ -60,10 +59,10 @@ RUN mkdir -p $WORKSPACE/app \
 WORKDIR $WORKSPACE
 
 # ===============================
-# 7️⃣ Copy requirements.txt and install Python packages
+# 7️⃣ Copy requirements.txt and install Python packages safely
 # ===============================
 COPY requirements.txt . 
-RUN pip install -r requirements.txt || echo "No requirements.txt found, skipping"
+RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; else echo "No requirements.txt found, skipping"; fi
 
 # ===============================
 # 8️⃣ Default user
