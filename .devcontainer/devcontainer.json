@@ -1,0 +1,6 @@
+{
+  "name": "Cloud Self-Healing DevContainer",
+  "build": { "dockerfile": "Dockerfile" },
+  "workspaceFolder": "/workspace",
+  "remoteUser": "root"
+}
