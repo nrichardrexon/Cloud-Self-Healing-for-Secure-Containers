@@ -1,6 +1,8 @@
 {
   "name": "Cloud Self-Healing DevContainer",
-  "build": { "dockerfile": "Dockerfile" },
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "workspaceFolder": "/workspace",
-  "remoteUser": "root"
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt"
 }
