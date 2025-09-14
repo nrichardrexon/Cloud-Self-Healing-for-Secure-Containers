@@ -1,15 +1,42 @@
-Python – by Microsoft (ms-python.python)
+VS Code Extensions – Setup Guide
+This guide lists the essential VS Code extensions for Python development, container management, Kubernetes, and convenience tools. It is beginner-friendly and helps you quickly set up your environment.
 
-Pylance – by Microsoft (ms-python.vscode-pylance)
+1️⃣ Python & Development
+Extension	Publisher	Purpose
+Python	Microsoft	Syntax highlighting, linting, debugging, virtual environment support
+Pylance	Microsoft	Type checking, IntelliSense, and code suggestions
+Jupyter (optional)	Microsoft	Run Jupyter notebooks directly in VS Code
 
-Docker – by Microsoft (ms-azuretools.vscode-docker)
+Tip: Python is mandatory. Install Pylance for smarter code suggestions. Jupyter is optional, only if you plan to run notebooks.
 
-GitLens – by Eric Amodio (eamodio.gitlens)
+2️⃣ Container & Kubernetes
+Extension	Publisher	Purpose
+Docker	Microsoft	Build and manage Docker containers and Dockerfiles
+Kubernetes	Microsoft	Run kubectl commands, browse clusters, and manage manifests
+Helm	Microsoft	Support for Helm charts and templates
 
-YAML – by Red Hat (redhat.vscode-yaml)
+Tip: Install these if your project uses containers or Kubernetes. Docker is mandatory for container-based projects.
 
-JSON – by Microsoft (ms-vscode.vscode-json)
+3️⃣ YAML / Config / Git
+Extension	Publisher	Purpose
+YAML	Red Hat	Syntax highlighting and schema validation for YAML files
+GitLens	Eric Amodio	Enhanced Git history, blame annotations, and diff tools
+.gitignore	CodeZombie	Syntax highlighting for .gitignore files
 
-Markdown All in One – by Yu Zhang (yzhang.markdown-all-in-one)
+Tip: YAML is important for Kubernetes manifests and configuration files. GitLens helps you understand Git history more easily.
 
-(Optional) GitHub Codespaces if not already installed.
+4️⃣ Optional / Convenience Tools
+Extension	Publisher	Purpose
+Better Comments	Aaron Bond	Highlight TODOs, NOTES, and WARNINGS in code
+REST Client	Huachao Mao	Test APIs directly from VS Code without external tools
+Material Icon Theme	PKief	Makes file icons visually intuitive and organized
+
+Tip: These tools are optional but improve productivity and code readability.
+
+5️⃣ Optional (for Codespaces users)
+Extension	Publisher	Purpose
+GitHub Codespaces	Microsoft	Connect and develop directly in GitHub Codespaces
+
+Tip: Only needed if you plan to use GitHub Codespaces instead of a local environment.
+
+✅ Pro Tip for Beginners: Install extensions one by one, and after installation, reload VS Code to enable them. Check the bottom-right corner of VS Code to confirm each extension is active.
