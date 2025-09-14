@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: checkpoint1-app
+  labels:
+    app: checkpoint1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: checkpoint1
+  template:
+    metadata:
+      labels:
+        app: checkpoint1
+    spec:
+      containers:
+        - name: app
+          image: checkpoint1-app:latest
+          ports:
+            - containerPort: 5000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5000
+            initialDelaySeconds: 3
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
