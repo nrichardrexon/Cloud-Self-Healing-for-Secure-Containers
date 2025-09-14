@@ -1,6 +1,6 @@
 fastapi==0.109.0
 uvicorn==0.24.0
-kubernetes==26.0.0
+kubernetes==26.1.0
 pydantic==2.6.0
-prometheus-client==1.16.0
+prometheus-client==0.22.1
 requests==2.32.0

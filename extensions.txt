@@ -1,0 +1,15 @@
+Python – by Microsoft (ms-python.python)
+
+Pylance – by Microsoft (ms-python.vscode-pylance)
+
+Docker – by Microsoft (ms-azuretools.vscode-docker)
+
+GitLens – by Eric Amodio (eamodio.gitlens)
+
+YAML – by Red Hat (redhat.vscode-yaml)
+
+JSON – by Microsoft (ms-vscode.vscode-json)
+
+Markdown All in One – by Yu Zhang (yzhang.markdown-all-in-one)
+
+(Optional) GitHub Codespaces if not already installed.
