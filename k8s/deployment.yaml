@@ -17,7 +17,7 @@ spec:
       containers:
         - name: sample-app
           image: sample-app:latest
-          imagePullPolicy: Never       # <-- Added this line
+          imagePullPolicy: Never       # <-- Mandatory
           ports:
             - containerPort: 5000
           livenessProbe:
