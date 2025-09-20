@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: checkpoint1-service
+  name: sample-app-service          # updated
 spec:
   selector:
-    app: checkpoint1
+    app: sample-app                 # updated
   ports:
     - protocol: TCP
       port: 80

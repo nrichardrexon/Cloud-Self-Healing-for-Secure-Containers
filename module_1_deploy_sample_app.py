@@ -5,17 +5,19 @@ import time
 from kubernetes_kind_setup import install_kind, create_cluster
 
 K8S_NAMESPACE = "default"
-DEPLOYMENT_NAME = "checkpoint1-app"
-SERVICE_NAME = "checkpoint1-service"
-DOCKER_IMAGE = "checkpoint1-app:latest"
+DEPLOYMENT_NAME = "sample-app-deployment"       # updated
+SERVICE_NAME = "sample-app-service"             # updated
+DOCKER_IMAGE = "sample-app:latest"              # updated
 POD_READY_TIMEOUT = 120  # seconds
 
 def run_command(cmd, check=True):
     """Run a shell command and print output."""
     try:
         print(f"Running: {cmd}")
-        result = subprocess.run(cmd, shell=True, check=check,
-                                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        result = subprocess.run(
+            cmd, shell=True, check=check,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
@@ -26,8 +28,10 @@ def run_command(cmd, check=True):
 
 def check_kind_cluster():
     """Check if Kind cluster exists."""
-    result = subprocess.run("kind get clusters", shell=True, text=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(
+        "kind get clusters", shell=True, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     clusters = result.stdout.strip().splitlines()
     if "selfhealing-cluster" in clusters:
         print("✅ Kind cluster found.")
@@ -45,7 +49,8 @@ def wait_for_pods_ready(deployment, namespace, timeout=120):
     interval = 5
     while elapsed < timeout:
         result = subprocess.run(
-            f"kubectl get deployment {deployment} -n {namespace} -o jsonpath='{{.status.readyReplicas}}/{{.status.replicas}}'",
+            f"kubectl get deployment {deployment} -n {namespace} "
+            f"-o jsonpath='{{.status.readyReplicas}}/{{.status.replicas}}'",
             shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
         output = result.stdout.strip()
