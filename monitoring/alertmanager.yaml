@@ -1,12 +1,73 @@
-global:
-  resolve_timeout: 5m
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 1m
 
-route:
-  group_by: ['alertname']
-  group_wait: 10s
-  group_interval: 1m
-  repeat_interval: 5m
-  receiver: 'default-receiver'
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 2m
+      receiver: 'default-receiver'
 
-receivers:
-- name: 'default-receiver'
+    receivers:
+    - name: 'default-receiver'
+      
+      email_configs:
+      - to: 'raguls200010@example.com'
+        from: 'alertmanager123123@example.com'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'alertmanager123123@example.com'
+        auth_password: 'richard123'
+        send_resolved: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0   # stable version
+          args:
+            - "--config.file=/etc/alertmanager/alertmanager.yml"
+            - "--storage.path=/alertmanager"
+          ports:
+            - containerPort: 9093
+          volumeMounts:
+            - name: alertmanager-config-volume
+              mountPath: /etc/alertmanager
+      volumes:
+        - name: alertmanager-config-volume
+          configMap:
+            name: alertmanager-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector:
+    app: alertmanager
+  ports:
+    - name: http
+      port: 9093
+      targetPort: 9093
