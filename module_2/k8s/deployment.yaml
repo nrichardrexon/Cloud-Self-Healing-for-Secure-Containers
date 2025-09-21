@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: module-2-sample-app
+  labels:
+    app: module-2-sample-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: module-2-sample-app
+  template:
+    metadata:
+      labels:
+        app: module-2-sample-app
+    spec:
+      containers:
+        - name: module-2-sample-app
+          image: module-2-sample-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
