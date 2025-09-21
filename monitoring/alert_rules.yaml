@@ -20,10 +20,10 @@ groups:
       description: "CPU usage >80% for pod {{ $labels.pod }}."
 
   - alert: HighMemoryUsage
-    expr: sum(container_memory_usage_bytes) by (pod) > 500000000   
+    expr: sum(container_memory_usage_bytes) by (pod) > 200000000   
     for: 2m
     labels:
       severity: critical
     annotations:
       summary: "Pod {{ $labels.pod }} high memory usage"
-      description: "Memory usage >500MB for pod {{ $labels.pod }}."
+      description: "Memory usage >200MB for pod {{ $labels.pod }}."
