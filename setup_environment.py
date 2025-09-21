@@ -23,7 +23,7 @@ run(f"{sys.executable} -m pip install --upgrade pip", "Upgrade pip")
 # -----------------------------
 # 2. Install Python dependencies from requirements.txt
 # -----------------------------
-run(f"{sys.executable} -m pip install -r requirements.txt", "Install Python dependencies")
+run(f"{sys.executable} -m pip install -r app/requirements.txt", "Install Python dependencies")
 
 # -----------------------------
 # 3. Install Python-based tools
