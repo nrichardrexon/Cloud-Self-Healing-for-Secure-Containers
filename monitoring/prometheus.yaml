@@ -60,15 +60,23 @@ spec:
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
+            - "--rule.files=/etc/prometheus/alert_rules.yml"
           ports:
             - containerPort: 9090
           volumeMounts:
             - name: prometheus-config-volume
               mountPath: /etc/prometheus
+          volumeMounts:
+            - name: prometheus-rules-volume
+              mountPath: /etc/prometheus/alert_rules.yml
+              subPath: alert_rules.yml
       volumes:
         - name: prometheus-config-volume
           configMap:
             name: prometheus-config
+        - name: prometheus-rules-volume
+          configMap:
+            name: prometheus-rules
 ---
 apiVersion: v1
 kind: Service
