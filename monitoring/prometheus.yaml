@@ -1,3 +1,4 @@
+# 1️⃣ ConfigMap
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -9,12 +10,10 @@ data:
       scrape_interval: 15s
 
     scrape_configs:
-      # Scrape metrics from Prometheus itself
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
 
-      # Scrape metrics from Kubernetes pods
       - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
           - role: pod
@@ -32,11 +31,16 @@ data:
             regex: (.+):(?:\d+);(\d+)
             replacement: $1:$2
 
-      # Scrape your sample Python app
       - job_name: 'sample-app'
         static_configs:
-          - targets: ['sample-app.default.svc.cluster.local:8080']   # change if app uses another port
+          - targets: ['sample-app.default.svc.cluster.local:5000']
+
+    rule_files:
+      - "/etc/prometheus/alert_rules.yml"
+
 ---
+
+# 2️⃣ Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -56,28 +60,27 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.52.0   # stable version
+          image: prom/prometheus:v2.52.0
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
-            - "--rule.files=/etc/prometheus/alert_rules.yml"
           ports:
             - containerPort: 9090
           volumeMounts:
             - name: prometheus-config-volume
-              mountPath: /etc/prometheus
-          volumeMounts:
-            - name: prometheus-rules-volume
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: prometheus-config-volume
               mountPath: /etc/prometheus/alert_rules.yml
               subPath: alert_rules.yml
       volumes:
         - name: prometheus-config-volume
           configMap:
             name: prometheus-config
-        - name: prometheus-rules-volume
-          configMap:
-            name: prometheus-rules
+
 ---
+
+# 3️⃣ Service
 apiVersion: v1
 kind: Service
 metadata:

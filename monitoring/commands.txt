@@ -1,0 +1,2 @@
+ kubectl port-forward -n monitoring svc/alertmanager 9093:9093
+  kubectl port-forward -n monitoring svc/pormetheus 9090:9090
