@@ -10,17 +10,3 @@ spec:
       port: 8000
       targetPort: 8000
   type: ClusterIP
-apiVersion: v1
-kind: Service
-metadata:
-  name: module-2-sample-app-service
-  labels:
-    app: module-2-sample-app
-spec:
-  selector:
-    app: module-2-sample-app
-  ports:
-    - protocol: TCP
-      port: 8000
-      targetPort: 8000
-  type: ClusterIP
