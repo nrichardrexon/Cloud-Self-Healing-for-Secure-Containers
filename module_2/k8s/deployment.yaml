@@ -5,10 +5,15 @@ metadata:
   labels:
     app: module-2-sample-app
 spec:
-  replicas: 1
+  replicas: 3  # updated for multi-replica deployment
   selector:
     matchLabels:
       app: module-2-sample-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -41,3 +46,8 @@ spec:
             limits:
               cpu: "250m"
               memory: "256Mi"
+          # Optional: expose metrics label for Prometheus
+          # Add annotations if you plan Prometheus auto-discovery
+          # annotations:
+          #   prometheus.io/scrape: "true"
+          #   prometheus.io/port: "8000"
