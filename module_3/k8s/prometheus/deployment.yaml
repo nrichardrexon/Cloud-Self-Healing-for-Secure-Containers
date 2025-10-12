@@ -54,8 +54,3 @@ spec:
         - name: prometheus-config
           configMap:
             name: prometheus-config
-# 3️⃣ Add all files to staging
-git add .
-
-# 4️⃣ Check status to confirm files staged
-git status
