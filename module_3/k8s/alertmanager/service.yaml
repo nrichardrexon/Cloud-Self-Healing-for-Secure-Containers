@@ -3,6 +3,8 @@ kind: Service
 metadata:
   name: alertmanager
   namespace: monitoring
+  labels:
+    app: alertmanager
 spec:
   selector:
     app: alertmanager

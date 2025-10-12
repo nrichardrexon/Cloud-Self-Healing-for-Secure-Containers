@@ -6,7 +6,7 @@ metadata:
   labels:
     app: alertmanager
 spec:
-  replicas: 2
+  replicas: 2  # High availability
   selector:
     matchLabels:
       app: alertmanager
@@ -21,6 +21,7 @@ spec:
           args:
             - "--config.file=/etc/alertmanager/alertmanager.yml"
             - "--storage.path=/alertmanager"
+            - "--log.level=info"
           ports:
             - containerPort: 9093
           env:
@@ -55,14 +56,15 @@ spec:
             httpGet:
               path: /-/healthy
               port: 9093
-            initialDelaySeconds: 10
-            periodSeconds: 15
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /-/ready
               port: 9093
-            initialDelaySeconds: 5
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 15
           volumeMounts:
             - name: alertmanager-config
               mountPath: /etc/alertmanager/alertmanager.yml

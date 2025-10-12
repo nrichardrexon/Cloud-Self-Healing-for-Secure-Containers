@@ -5,14 +5,23 @@ metadata:
   namespace: monitoring
 data:
   prometheus.yml: |
+    ## ----------------------------
+    ## Global Configuration
+    ## ----------------------------
     global:
-      scrape_interval: 15s
+      scrape_interval: 15s       # Frequency of scraping targets
+      evaluation_interval: 15s   # How often rules are evaluated
 
+    ## ----------------------------
+    ## Scrape Configurations
+    ## ----------------------------
     scrape_configs:
+      # Prometheus self-monitoring
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
 
+      # Kubernetes pod monitoring
       - job_name: 'kubernetes-pods'
         kubernetes_sd_configs:
           - role: pod
@@ -30,13 +39,18 @@ data:
             regex: (.+):(?:\d+);(\d+)
             replacement: $1:$2
 
+      # Module 1 app metrics
       - job_name: 'module-1-app'
         static_configs:
           - targets: ['sample-app.default.svc.cluster.local:5000']
 
+      # Module 2 app metrics
       - job_name: 'module-2-app'
         static_configs:
           - targets: ['module-2-sample-app.default.svc.cluster.local:8000']
 
+    ## ----------------------------
+    ## Alerting Rules
+    ## ----------------------------
     rule_files:
-      - "/etc/prometheus/alert_rules/alert_rules.yml"
+      - "/etc/prometheus/alert_rules/alert_rules.yml"  # Centralized rules for Module 3 alerts

@@ -5,9 +5,15 @@ metadata:
   namespace: monitoring
 data:
   alertmanager.yml: |
+    ## ----------------------------
+    ## Global Settings
+    ## ----------------------------
     global:
-      resolve_timeout: 1m
+      resolve_timeout: 1m  # Alert considered resolved after 1 minute
 
+    ## ----------------------------
+    ## Routing
+    ## ----------------------------
     route:
       group_by: ['alertname']
       group_wait: 10s
@@ -15,12 +21,22 @@ data:
       repeat_interval: 2m
       receiver: 'default-receiver'
 
+    ## ----------------------------
+    ## Receivers
+    ## ----------------------------
     receivers:
       - name: 'default-receiver'
         email_configs:
-          - to: '${EMAIL_TO}'
-            from: '${EMAIL_FROM}'
+          - to: '${EMAIL_TO}'              # Target recipient
+            from: '${EMAIL_FROM}'          # Sender address
             smarthost: 'smtp.gmail.com:587'
             auth_username: '${SMTP_USER}'
             auth_password: '${SMTP_PASS}'
             send_resolved: true
+
+      # Example future integration (Slack, Webhook):
+      # - name: 'slack-receiver'
+      #   slack_configs:
+      #     - api_url: '${SLACK_WEBHOOK_URL}'
+      #       channel: '#alerts'
+      #       send_resolved: true

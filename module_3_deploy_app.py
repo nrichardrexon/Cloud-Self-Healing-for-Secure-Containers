@@ -40,7 +40,7 @@ def wait_for_pods_ready(label_selector, namespace, timeout=180):
         output = result.stdout.strip()
         if output:
             statuses = output.split()
-            if all(s == 'true' for s in statuses) and statuses:
+            if statuses and all(s.lower() == 'true' for s in statuses):
                 print(f"✅ All {len(statuses)} pods are ready!")
                 return True
         time.sleep(interval)
@@ -53,7 +53,7 @@ def verify_service(service_name, port, timeout=60):
     print(f"⏳ Verifying {service_name} endpoint on port {port}...")
     pf_cmd = f"kubectl port-forward svc/{service_name} {port}:{port} -n {K8S_NAMESPACE}"
     pf_proc = subprocess.Popen(pf_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    time.sleep(3)
+    time.sleep(3)  # allow port-forward to start
 
     success = False
     start = time.time()
@@ -76,7 +76,7 @@ def verify_service(service_name, port, timeout=60):
 def deploy_module_3():
     """Deploy Prometheus and Alertmanager with namespace, secrets, and configs."""
     print("=== Module 3 Deployment: Monitoring & Alerts ===")
-    
+
     # Create namespace
     run_command(f"kubectl apply -f module_3/k8s/namespace.yaml")
 
@@ -94,8 +94,12 @@ def deploy_module_3():
     run_command(f"kubectl apply -f module_3/k8s/alertmanager/service.yaml")
 
     # Wait for pods to be ready
-    wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, timeout=POD_READY_TIMEOUT)
-    wait_for_pods_ready(f"app={ALERT_DEPLOYMENT}", K8S_NAMESPACE, timeout=POD_READY_TIMEOUT)
+    if not wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, timeout=POD_READY_TIMEOUT):
+        print("⚠ Prometheus pods did not become ready in time.")
+        sys.exit(1)
+    if not wait_for_pods_ready(f"app={ALERT_DEPLOYMENT}", K8S_NAMESPACE, timeout=POD_READY_TIMEOUT):
+        print("⚠ Alertmanager pods did not become ready in time.")
+        sys.exit(1)
 
     # Verify endpoints
     verify_service(PROM_SERVICE, port=9090, timeout=VERIFY_TIMEOUT)
