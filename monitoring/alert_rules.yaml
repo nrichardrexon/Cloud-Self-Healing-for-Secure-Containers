@@ -9,7 +9,7 @@ data:
     - name: app.rules
       rules:
       - alert: ContainerRestart
-        expr: rate(kube_pod_container_status_restarts_total[0.5m]) > 0
+        expr: rate(kube_pod_container_status_restarts_total[30s]) > 0
         for: 1m
         labels:
           severity: warning

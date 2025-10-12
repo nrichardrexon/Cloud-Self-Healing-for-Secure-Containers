@@ -76,22 +76,22 @@ def verify_service(service_name, port, timeout=60):
 def deploy_module_3():
     """Deploy Prometheus and Alertmanager with namespace, secrets, and configs."""
     print("=== Module 3 Deployment: Monitoring & Alerts ===")
+    
     # Create namespace
-    run_command(f"kubectl apply -f k8s/namespace.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/namespace.yaml")
 
     # Apply Alertmanager secrets first
-    run_command(f"kubectl apply -f k8s/alertmanager/secret.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/alertmanager/secret.yaml")
 
     # Apply ConfigMaps
-    run_command(f"kubectl apply -f k8s/prometheus/configmap.yaml")
-    run_command(f"kubectl apply -f k8s/alertmanager/configmap.yaml")
-    run_command(f"kubectl apply -f alert_rules/alert_rules.yml")  # alert rules ConfigMap already included in prometheus ConfigMap
+    run_command(f"kubectl apply -f module_3/k8s/prometheus/configmap.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/alertmanager/configmap.yaml")
 
     # Apply Deployments and Services
-    run_command(f"kubectl apply -f k8s/prometheus/deployment.yaml")
-    run_command(f"kubectl apply -f k8s/prometheus/service.yaml")
-    run_command(f"kubectl apply -f k8s/alertmanager/deployment.yaml")
-    run_command(f"kubectl apply -f k8s/alertmanager/service.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/prometheus/deployment.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/prometheus/service.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/alertmanager/deployment.yaml")
+    run_command(f"kubectl apply -f module_3/k8s/alertmanager/service.yaml")
 
     # Wait for pods to be ready
     wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, timeout=POD_READY_TIMEOUT)

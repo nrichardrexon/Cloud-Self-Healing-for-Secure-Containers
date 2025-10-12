@@ -44,6 +44,13 @@ spec:
                 secretKeyRef:
                   name: alertmanager-credentials
                   key: smtp_pass
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           livenessProbe:
             httpGet:
               path: /-/healthy
