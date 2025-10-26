@@ -1,0 +1,58 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    # This label is important! The operator uses it to find which rules to load.
+    # Check your existing PrometheusRule for the correct label if this doesn't work.
+    release: prometheus 
+    app: kube-prometheus-stack
+  name: self-healing-rules
+  namespace: monitoring
+spec:
+  groups:
+  - name: self_healing
+    rules:
+    # Pod restarts
+    - alert: PodRestartingTooMuch
+      expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+      for: 2m
+      labels:
+        severity: warning
+        # This custom label will be used by your Remediator service
+        action: restart
+      annotations:
+        summary: "Pod {{ $labels.pod }} is restarting too much"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 15 minutes"
+
+    # High CPU usage
+    - alert: HighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{image!=""}[5m]) * 100 > 80
+      for: 2m
+      labels:
+        severity: warning
+        action: scale
+      annotations:
+        summary: "High CPU usage on pod {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is using {{ $value }}% CPU"
+
+    # Failed readiness probes
+    - alert: ReadinessProbeFailing
+      expr: kube_pod_container_status_ready == 0
+      for: 1m
+      labels:
+        severity: critical
+        action: restart
+      annotations:
+        summary: "Readiness probe failing for pod {{ $labels.pod }}"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has failing readiness probes"
+
+    # Deployment rollback scenario
+    - alert: DeploymentFailing
+      expr: kube_deployment_status_replicas_unavailable > 0
+      for: 2m
+      labels:
+        severity: critical
+        action: rollback
+      annotations:
+        summary: "Deployment {{ $labels.deployment }} has unavailable replicas"
+        description: "Deployment {{ $labels.deployment }} in namespace {{ $labels.namespace }} has {{ $value }} unavailable replicas"
