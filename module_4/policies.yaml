@@ -1,6 +1,5 @@
-# Map alert names to actions (kubectl commands)
-HighCPUUsage: "kubectl scale deployment module-2-sample-app --replicas=5"
-PodCrashLoop: "kubectl rollout restart deployment module-2-sample-app"
-BadImageDetected: "kubectl rollout undo deployment module-2-sample-app"
-SuspiciousPod: "kubectl cordon pod suspicious-pod-name"
-MemoryOverload: "kubectl scale deployment module-2-sample-app --replicas=3"
+HighCPUUsage: "scale:module-2-sample-app,5"
+PodCrashLoop: "restart:module-2-sample-app"
+BadImageDetected: "rollback:module-2-sample-app"
+SuspiciousPod: "quarantine:suspicious-pod-name"
+MemoryOverload: "scale:module-2-sample-app,3"
