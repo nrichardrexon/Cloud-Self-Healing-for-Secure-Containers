@@ -6,7 +6,7 @@ metadata:
   labels:
     app: alertmanager
 spec:
-  replicas: 2  # High availability
+  replicas: 2
   selector:
     matchLabels:
       app: alertmanager
@@ -26,50 +26,32 @@ spec:
           ports:
             - containerPort: 9093
           env:
-            - name: EMAIL_TO
+            - name: ALERTMANAGER_USER
               valueFrom:
                 secretKeyRef:
-                  name: alertmanager-credentials
-                  key: email_to
-            - name: EMAIL_FROM
-              valueFrom:
-                secretKeyRef:
-                  name: alertmanager-credentials
-                  key: email_from
-            - name: SMTP_USER
-              valueFrom:
-                secretKeyRef:
-                  name: alertmanager-credentials
+                  name: alertmanager-basic-auth
                   key: smtp_user
-            - name: SMTP_PASS
+            - name: ALERTMANAGER_PASS
               valueFrom:
                 secretKeyRef:
-                  name: alertmanager-credentials
+                  name: alertmanager-basic-auth
                   key: smtp_pass
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
+          volumeMounts:
+            - name: alertmanager-config
+              mountPath: /etc/alertmanager/alertmanager.yml
+              subPath: alertmanager.yml
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 9093
             initialDelaySeconds: 15
             periodSeconds: 20
-            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /-/ready
               port: 9093
             initialDelaySeconds: 10
             periodSeconds: 15
-          volumeMounts:
-            - name: alertmanager-config
-              mountPath: /etc/alertmanager/alertmanager.yml
-              subPath: alertmanager.yml
       volumes:
         - name: alertmanager-config
           configMap:

@@ -18,7 +18,6 @@ spec:
       containers:
         - name: prometheus
           image: prom/prometheus:latest
-          imagePullPolicy: IfNotPresent
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
@@ -42,7 +41,6 @@ spec:
               port: 9090
             initialDelaySeconds: 5
             periodSeconds: 10
-            failureThreshold: 3
           resources:
             requests:
               cpu: "100m"

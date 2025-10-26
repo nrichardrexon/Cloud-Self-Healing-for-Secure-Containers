@@ -5,38 +5,39 @@ metadata:
   namespace: monitoring
 data:
   alertmanager.yml: |
-    ## ----------------------------
-    ## Global Settings
-    ## ----------------------------
     global:
-      resolve_timeout: 1m  # Alert considered resolved after 1 minute
+      resolve_timeout: 1m
 
-    ## ----------------------------
-    ## Routing
-    ## ----------------------------
     route:
-      group_by: ['alertname']
+      receiver: 'remediator-webhook'
+      group_by: ['alertname', 'namespace', 'pod', 'action']
       group_wait: 10s
       group_interval: 1m
       repeat_interval: 2m
-      receiver: 'default-receiver'
 
-    ## ----------------------------
-    ## Receivers
-    ## ----------------------------
+      routes:
+        - match:
+            action: restart
+          receiver: 'remediator-webhook'
+        - match:
+            action: scale
+          receiver: 'remediator-webhook'
+        - match:
+            action: rollback
+          receiver: 'remediator-webhook'
+
     receivers:
-      - name: 'default-receiver'
-        email_configs:
-          - to: '${EMAIL_TO}'              # Target recipient
-            from: '${EMAIL_FROM}'          # Sender address
-            smarthost: 'smtp.gmail.com:587'
-            auth_username: '${SMTP_USER}'
-            auth_password: '${SMTP_PASS}'
+      - name: 'remediator-webhook'
+        webhook_configs:
+          - url: 'http://remediator-service.monitoring.svc.cluster.local:8080/alert'
             send_resolved: true
 
-      # Example future integration (Slack, Webhook):
-      # - name: 'slack-receiver'
-      #   slack_configs:
-      #     - api_url: '${SLACK_WEBHOOK_URL}'
-      #       channel: '#alerts'
-      #       send_resolved: true
+      - name: 'default-receiver'
+        email_configs:
+          - to: 'alerts-team@example.com'
+            from: 'no-reply@example.com'
+            smarthost: 'smtp.gmail.com:587'
+            auth_username: 'no-reply@example.com'
+            auth_identity: 'no-reply@example.com'
+            auth_password: 'change_me'
+            send_resolved: true
