@@ -9,29 +9,45 @@ data:
       resolve_timeout: 1m
 
     route:
-      receiver: 'remediator-webhook'
+      receiver: 'default-receiver'
       group_by: ['alertname', 'namespace', 'pod', 'action']
       group_wait: 10s
       group_interval: 1m
       repeat_interval: 2m
 
       routes:
+        # 🚀 Restart Actions
         - match:
             action: restart
           receiver: 'remediator-webhook'
+          continue: true
+
+        # ⚙️ Scale Actions
         - match:
             action: scale
           receiver: 'remediator-webhook'
+          continue: true
+
+        # 🔁 Rollback Actions
         - match:
             action: rollback
           receiver: 'remediator-webhook'
+          continue: true
+
+        # 📩 Default route for unmatched alerts
+        - receiver: 'default-receiver'
 
     receivers:
+      # 🧠 Remediator Webhook Receiver (primary automation)
       - name: 'remediator-webhook'
         webhook_configs:
-          - url: 'http://remediator-service.monitoring.svc.cluster.local:8080/alert'
+          - url: 'http://remediator.monitoring.svc.cluster.local:8080/remediate'
             send_resolved: true
+            http_config:
+              follow_redirects: true
+              enable_http2: true
 
+      # ✉️ Default Fallback Receiver (notification only)
       - name: 'default-receiver'
         email_configs:
           - to: 'alerts-team@example.com'

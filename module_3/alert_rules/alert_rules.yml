@@ -2,20 +2,46 @@ groups:
 - name: app.rules
   rules:
   # ----------------------------
-  # ⚠️ Container Restarts
+  # ⚠️ Module 1 Container Restarts
   # ----------------------------
-  - alert: ContainerRestart
-    expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
+  - alert: Module1ContainerRestart
+    expr: rate(kube_pod_container_status_restarts_total{namespace="default", pod=~"sample-app.*"}[5m]) > 0
     for: 1m
     labels:
       severity: warning
       action: restart
     annotations:
-      summary: "Pod {{ $labels.pod }} is restarting"
-      description: "Container is restarting frequently in namespace {{ $labels.namespace }}. Trigger auto-restart."
+      summary: "Module 1 Pod {{ $labels.pod }} is restarting"
+      description: "Container is restarting frequently in Module 1 namespace. Trigger auto-restart."
 
   # ----------------------------
-  # 🔥 High CPU Usage
+  # ⚠️ Module 2 Container Restarts
+  # ----------------------------
+  - alert: Module2ContainerRestart
+    expr: rate(kube_pod_container_status_restarts_total{namespace="default", pod=~"module-2-sample-app.*"}[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+      action: restart
+    annotations:
+      summary: "Module 2 Pod {{ $labels.pod }} is restarting"
+      description: "Container is restarting frequently in Module 2 namespace. Trigger auto-restart."
+
+  # ----------------------------
+  # ⚙️ Module 5 FaultInjector Container Restarts
+  # ----------------------------
+  - alert: Module5ContainerRestart
+    expr: rate(kube_pod_container_status_restarts_total{namespace="monitoring", pod=~".*faultinjector.*"}[5m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+      action: restart
+    annotations:
+      summary: "Module 5 FaultInjector Pod {{ $labels.pod }} is restarting"
+      description: "Container is restarting frequently in Module 5 namespace. Trigger auto-restart."
+
+  # ----------------------------
+  # 🔥 High CPU Usage (all monitored pods)
   # ----------------------------
   - alert: HighCPUUsage
     expr: sum by (pod, namespace) (rate(container_cpu_usage_seconds_total[2m]))
@@ -29,7 +55,7 @@ groups:
       description: "CPU usage >80% of requested cores for pod {{ $labels.pod }}. Trigger horizontal scale-up."
 
   # ----------------------------
-  # 🧠 High Memory Usage
+  # 🧠 High Memory Usage (all monitored pods)
   # ----------------------------
   - alert: HighMemoryUsage
     expr: sum by (pod, namespace) (container_memory_usage_bytes)
@@ -43,7 +69,7 @@ groups:
       description: "Memory usage >80% of memory limit for pod {{ $labels.pod }}. Trigger horizontal scale-up."
 
   # ----------------------------
-  # ❌ Failing Readiness
+  # ❌ Failing Readiness (all monitored pods)
   # ----------------------------
   - alert: ReadinessProbeFailing
     expr: kube_pod_container_status_ready{condition="false"} == 1
@@ -56,7 +82,7 @@ groups:
       description: "Readiness probe failing for pod {{ $labels.pod }}. Trigger restart."
 
   # ----------------------------
-  # 🚨 Deployment Failure
+  # 🚨 Deployment Failure (all monitored deployments)
   # ----------------------------
   - alert: DeploymentFailure
     expr: kube_deployment_status_replicas_unavailable > 0
@@ -67,6 +93,19 @@ groups:
     annotations:
       summary: "Deployment {{ $labels.deployment }} failing"
       description: "Unhealthy deployment detected. Trigger rollback to previous stable version."
+
+  # ----------------------------
+  # 🧩 Module 1 Metrics Endpoint Down
+  # ----------------------------
+  - alert: Module1MetricsEndpointDown
+    expr: absent(up{job="module-1-app"} == 1)
+    for: 1m
+    labels:
+      severity: critical
+      action: restart
+    annotations:
+      summary: "Module 1 metrics endpoint unreachable"
+      description: "Prometheus cannot scrape /metrics from Module 1 app. Trigger pod restart."
 
   # ----------------------------
   # 🧩 Module 2 Metrics Endpoint Down
@@ -80,3 +119,43 @@ groups:
     annotations:
       summary: "Module 2 metrics endpoint unreachable"
       description: "Prometheus cannot scrape /metrics from Module 2 app. Trigger pod restart."
+
+  # ----------------------------
+  # 🧩 Module 5 Metrics Endpoint Down
+  # ----------------------------
+  - alert: Module5MetricsEndpointDown
+    expr: absent(up{job="faultinjector"} == 1)
+    for: 1m
+    labels:
+      severity: critical
+      action: restart
+    annotations:
+      summary: "Module 5 metrics endpoint unreachable"
+      description: "Prometheus cannot scrape /metrics from Module 5 fault injector. Trigger pod restart."
+
+    # ----------------------------
+  # 💀 Container Crash
+  # ----------------------------
+  - alert: ContainerCrash
+    expr: increase(kube_pod_container_status_terminated_reason{reason="Error"}[1m]) > 0
+    for: 30s
+    labels:
+      severity: critical
+      action: restart
+    annotations:
+      summary: "Pod {{ $labels.pod }} crashed"
+      description: "Container in pod {{ $labels.pod }} has terminated unexpectedly. Trigger restart."
+
+  # ----------------------------
+  # 🧱 Deployment Failed (Improved Expression)
+  # ----------------------------
+  - alert: DeploymentFailed
+    expr: kube_deployment_status_condition{condition="Progressing",status="false"} == 1
+    for: 1m
+    labels:
+      severity: critical
+      action: rollback
+    annotations:
+      summary: "Deployment {{ $labels.deployment }} failed to progress"
+      description: "Deployment is not progressing. Trigger rollback to previous stable version."
+

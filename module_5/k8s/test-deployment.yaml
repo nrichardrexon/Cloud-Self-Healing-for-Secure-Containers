@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: faultinjector-sa
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: faultinjector-role
+  namespace: monitoring
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  - pods/exec
+  - pods/log
+  verbs:
+  - get
+  - list
+  - delete
+  - create
+  - update
+  - patch
+  - watch
+  - exec
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - update
+  - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: faultinjector-rolebinding
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: faultinjector-role
+subjects:
+- kind: ServiceAccount
+  name: faultinjector-sa
+  namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: faultinjector
+  name: test-remediator
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: faultinjector
+  template:
+    metadata:
+      labels:
+        app: faultinjector
+    spec:
+      containers:
+      - args:
+        - "apt-get update && \\\napt-get install -y --no-install-recommends stress\
+          \ procps curl python3 python3-pip && \\\npip3 install requests && \\\necho\
+          \ \"\u2705 Fault Injector Ready: Running in monitoring namespace\"; \\\n\
+          sleep infinity\n"
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: NAMESPACE
+          value: monitoring
+        - name: LABEL_SELECTOR
+          value: app=faultinjector
+        image: module5-faultinjector:latest
+        imagePullPolicy: IfNotPresent
+        name: faultinjector
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccountName: faultinjector-sa

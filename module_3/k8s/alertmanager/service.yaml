@@ -9,7 +9,10 @@ spec:
   selector:
     app: alertmanager
   ports:
-    - name: http
+    - name: alertmanager-http
       port: 9093
       targetPort: 9093
+    - name: remediator-metrics
+      port: 8080
+      targetPort: 8080
   type: ClusterIP

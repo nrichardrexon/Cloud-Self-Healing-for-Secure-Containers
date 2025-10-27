@@ -28,6 +28,8 @@ spec:
           volumeMounts:
             - name: prometheus-config
               mountPath: /etc/prometheus
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/alert_rules
           livenessProbe:
             httpGet:
               path: /-/healthy
@@ -52,3 +54,6 @@ spec:
         - name: prometheus-config
           configMap:
             name: prometheus-config
+        - name: prometheus-rules
+          configMap:
+            name: prometheus-rules

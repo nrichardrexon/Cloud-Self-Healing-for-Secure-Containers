@@ -16,7 +16,12 @@ spec:
         app: remediator
     spec:
       containers:
-      - image: remediator:latest
+      - env:
+        - name: POLICIES_FILE
+          value: /app/policies.yaml
+        - name: ENABLE_METRICS
+          value: 'true'
+        image: remediator:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
@@ -43,7 +48,7 @@ spec:
         volumeMounts:
         - mountPath: /app/policies.yaml
           name: policies-volume
-          readOnly: false
+          readOnly: true
           subPath: policies.yaml
       restartPolicy: Always
       volumes:

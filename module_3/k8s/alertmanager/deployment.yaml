@@ -18,6 +18,7 @@ spec:
       containers:
         - name: alertmanager
           image: prom/alertmanager:v0.27.0
+          imagePullPolicy: IfNotPresent
           args:
             - "--config.file=/etc/alertmanager/alertmanager.yml"
             - "--storage.path=/alertmanager"
@@ -52,6 +53,7 @@ spec:
               port: 9093
             initialDelaySeconds: 10
             periodSeconds: 15
+
       volumes:
         - name: alertmanager-config
           configMap:

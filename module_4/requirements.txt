@@ -1,7 +1,22 @@
-fastapi
-uvicorn
-pydantic
-requests
-prometheus_client
-PyYAML
-pytest
+# ==========================================
+# 🧠 Remediator Requirements (Final Stable)
+# ==========================================
+
+# --- Core framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# --- Data and config ---
+pydantic==2.9.2
+PyYAML==6.0.2
+requests==2.32.3
+
+# --- Observability and metrics ---
+prometheus-client==0.21.0
+prometheus-fastapi-instrumentator==6.1.0
+
+# --- Testing and validation ---
+pytest==8.3.3
+
+# --- (Optional, for subprocess safety) ---
+psutil==6.1.0

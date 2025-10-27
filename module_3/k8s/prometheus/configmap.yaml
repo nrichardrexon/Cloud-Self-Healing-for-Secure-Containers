@@ -9,26 +9,55 @@ data:
       scrape_interval: 15s
       evaluation_interval: 15s
 
+    # ----------------------------
+    # 📊 Scrape Targets
+    # ----------------------------
     scrape_configs:
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
 
+      # ----------------------------
+      # Module 1 App
+      # ----------------------------
       - job_name: 'module-1-app'
+        metrics_path: /metrics
         static_configs:
-          - targets: ['sample-app.default.svc.cluster.local:5000']
+          - targets: ['sample-app-service.default.svc.cluster.local:80']
 
+      # ----------------------------
+      # Module 2 App
+      # ----------------------------
       - job_name: 'module-2-app'
+        metrics_path: /metrics
         static_configs:
-          - targets: ['module-2-sample-app.default.svc.cluster.local:8000']
+          - targets: ['module-2-sample-app-service.default.svc.cluster.local:8000']
 
+      # ----------------------------
+      # Remediator (Module 4)
+      # ----------------------------
       - job_name: 'remediator'
+        metrics_path: /metrics
         static_configs:
-          - targets: ['remediator-service.monitoring.svc.cluster.local:8080']
+          - targets: ['remediator.monitoring.svc.cluster.local:8080']
 
+      # ----------------------------
+      # Fault Injector (Module 5)
+      # ----------------------------
+      - job_name: 'faultinjector'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['faultinjector.monitoring.svc.cluster.local:9091']
+
+    # ----------------------------
+    # 📜 Alert Rules
+    # ----------------------------
     rule_files:
       - "/etc/prometheus/alert_rules/*.yml"
 
+    # ----------------------------
+    # 🚨 Alertmanager Integration
+    # ----------------------------
     alerting:
       alertmanagers:
         - static_configs:
