@@ -5,8 +5,16 @@ metadata:
   namespace: monitoring
 data:
   policies.yaml: |
+    # Remediator policies – local dev / live updates
     HighCPUUsage: "kubectl scale deployment module-2-sample-app --replicas=5"
     PodCrashLoop: "kubectl rollout restart deployment module-2-sample-app"
     BadImageDetected: "kubectl rollout undo deployment module-2-sample-app"
     SuspiciousPod: "kubectl cordon pod suspicious-pod-name"
     MemoryOverload: "kubectl scale deployment module-2-sample-app --replicas=3"
+
+# Local development / live update instructions:
+# 1️⃣ After modifying policies.yaml, apply changes:
+#    kubectl apply -f module_4/k8s/configmap.yaml
+# 2️⃣ Restart the Remediator to pick up new policies:
+#    kubectl rollout restart deployment remediator -n monitoring
+# This avoids rebuilding the image and allows live updates.

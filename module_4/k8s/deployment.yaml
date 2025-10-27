@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: remediator
-  namespace: monitoring
   labels:
     app: remediator
+  name: remediator
+  namespace: monitoring
 spec:
   replicas: 1
   selector:
@@ -16,34 +16,40 @@ spec:
         app: remediator
     spec:
       containers:
-        - name: remediator
-          image: remediator:latest
-          ports:
-            - containerPort: 8080
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "250m"
-              memory: "256Mi"
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: 8080
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          volumeMounts:
-            - name: policies-volume
-              mountPath: /app/policies.yaml
-              subPath: policies.yaml
+      - image: remediator:latest
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        name: remediator
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 250m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        volumeMounts:
+        - mountPath: /app/policies.yaml
+          name: policies-volume
+          readOnly: false
+          subPath: policies.yaml
+      restartPolicy: Always
       volumes:
-        - name: policies-volume
-          configMap:
-            name: remediator-policies
+      - configMap:
+          items:
+          - key: policies.yaml
+            path: policies.yaml
+          name: remediator-policies
+        name: policies-volume

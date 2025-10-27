@@ -4,3 +4,4 @@ pydantic
 requests
 prometheus_client
 PyYAML
+pytest
