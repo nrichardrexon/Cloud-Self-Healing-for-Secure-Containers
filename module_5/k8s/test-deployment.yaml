@@ -29,7 +29,6 @@ rules:
   - update
   - patch
   - watch
-  - exec
 - apiGroups:
   - apps
   resources:
@@ -59,6 +58,8 @@ kind: Deployment
 metadata:
   labels:
     app: faultinjector
+    module: '5'
+    phase: fault-injection
   name: test-remediator
   namespace: monitoring
 spec:
@@ -70,13 +71,14 @@ spec:
     metadata:
       labels:
         app: faultinjector
+        managed-by: remediator
     spec:
       containers:
       - args:
         - "apt-get update && \\\napt-get install -y --no-install-recommends stress\
           \ procps curl python3 python3-pip && \\\npip3 install requests && \\\necho\
-          \ \"\u2705 Fault Injector Ready: Running in monitoring namespace\"; \\\n\
-          sleep infinity\n"
+          \ \"\u2705 Fault Injector Ready: Running in 'monitoring' namespace (Module\
+          \ 5 integrated with Module 4 Remediator)\" && \\\nsleep infinity\n"
         command:
         - /bin/bash
         - -c

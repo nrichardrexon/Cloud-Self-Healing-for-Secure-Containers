@@ -3,10 +3,55 @@ import subprocess
 import time
 import shutil
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 NAMESPACE = "monitoring"
 LABEL_SELECTOR = "app=faultinjector"
+METRICS_PORT = 9090
 
+# ----------------------------------------------------
+# 🩺 Simple /metrics endpoint for Prometheus
+# ----------------------------------------------------
+health_status = {"alive": 1, "last_update": time.time()}
+
+class MetricsHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/metrics":
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain; version=0.0.4")
+            self.end_headers()
+
+            uptime = int(time.time() - health_status["last_update"])
+            metrics = (
+                f"faultinjector_health {health_status['alive']}\n"
+                f"faultinjector_uptime_seconds {uptime}\n"
+            )
+            self.wfile.write(metrics.encode("utf-8"))
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+def start_metrics_server():
+    while True:
+        try:
+            server = HTTPServer(("0.0.0.0", METRICS_PORT), MetricsHandler)
+            print(f"✅ Metrics endpoint running on port {METRICS_PORT} (/metrics)")
+            server.serve_forever()
+        except Exception as e:
+            print(f"⚠️ Metrics server crashed: {e}. Restarting in 5s...")
+            time.sleep(5)
+
+def heartbeat_updater():
+    """Continuously updates the metrics heartbeat so Prometheus sees the target as alive."""
+    while True:
+        health_status["alive"] = 1
+        health_status["last_update"] = time.time()
+        time.sleep(15)  # Update every 15 seconds
+
+# ----------------------------------------------------
+# 🧪 Fault injection logic (existing)
+# ----------------------------------------------------
 def check_kubectl():
     if not shutil.which("kubectl"):
         print("❌ Error: 'kubectl' not found in container. Install it or rebuild the image.")
@@ -58,7 +103,6 @@ def inject_faults():
         return
 
     for pod in pods:
-        # Skip pods that are not running
         status = run_command(
             f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'"
         )
@@ -66,15 +110,20 @@ def inject_faults():
             print(f"⚠️ Pod {pod} is not running ({status}). Skipping fault injection.")
             continue
 
-        # Kill pod
         kill_pod(pod)
-        time.sleep(5)  # allow cluster to stabilize
-
-        # Stress CPU
+        time.sleep(5)
         stress_cpu(pod)
-
-        # Stress Memory
         stress_memory(pod)
 
+# ----------------------------------------------------
+# 🚀 Main entrypoint
+# ----------------------------------------------------
 if __name__ == "__main__":
+    # Start /metrics endpoint in background
+    threading.Thread(target=start_metrics_server, daemon=True).start()
+
+    # Start health heartbeat updater
+    threading.Thread(target=heartbeat_updater, daemon=True).start()
+
+    # Run fault injector loop
     inject_faults()

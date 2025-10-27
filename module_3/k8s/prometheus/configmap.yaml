@@ -47,7 +47,7 @@ data:
       - job_name: 'faultinjector'
         metrics_path: /metrics
         static_configs:
-          - targets: ['faultinjector.monitoring.svc.cluster.local:9091']
+          - targets: ['test-remediator.monitoring.svc.cluster.local:9090']
 
     # ----------------------------
     # 📜 Alert Rules
