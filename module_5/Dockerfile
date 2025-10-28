@@ -1,5 +1,5 @@
 # =========================================
-# ✅ Corrected Dockerfile (Module 5 – Fault Injector)
+# ✅ Final Dockerfile (Module 5 – Fault Injector)
 # =========================================
 
 # Base lightweight Python image
@@ -9,27 +9,37 @@ FROM python:3.12-slim
 WORKDIR /app
 
 # -------------------------------------------------
-# 1️⃣ Install dependencies
+# 1️⃣ Install dependencies (build-time only)
 # -------------------------------------------------
-COPY requirements.txt ./requirements.txt
+COPY module_5/requirements.txt ./requirements.txt
+
+# Use root for setup
+USER root
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl gcc build-essential \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install --no-cache-dir -r requirements.txt \
+    && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------
 # 2️⃣ Copy fault injection code & policies
 # -------------------------------------------------
-COPY app/ ./app
-COPY policies.yaml ./policies.yaml
+COPY module_5/app ./app
+COPY module_5/scripts ./scripts
+COPY module_5/policies.yaml ./policies.yaml
 
 # -------------------------------------------------
-# 3️⃣ Create non-root user (security best practice)
+# 3️⃣ Expose metrics port (needed by Prometheus)
+# -------------------------------------------------
+EXPOSE 9090
+
+# -------------------------------------------------
+# 4️⃣ Create non-root user (for runtime security)
 # -------------------------------------------------
 RUN useradd -m faultinjectoruser
 USER faultinjectoruser
 
 # -------------------------------------------------
-# 4️⃣ Default behavior — run the fault injector loop
+# 5️⃣ Default entrypoint — run the fault injector
 # -------------------------------------------------
-CMD ["python", "app/main.py"]
+CMD ["python", "scripts/fault_injection.py"]

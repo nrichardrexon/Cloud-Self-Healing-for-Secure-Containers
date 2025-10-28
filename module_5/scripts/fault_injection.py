@@ -1,19 +1,25 @@
-# module_5/scripts/fault_injection.py
+# ============================================
+# module_5/scripts/fault_injection.py  ✅ FINAL
+# ============================================
+
 import subprocess
 import time
 import shutil
 import sys
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import socket
 
 NAMESPACE = "monitoring"
 LABEL_SELECTOR = "app=faultinjector"
 METRICS_PORT = 9090
+RECHECK_INTERVAL = 300  # Run fault injection every 5 min
 
 # ----------------------------------------------------
 # 🩺 Simple /metrics endpoint for Prometheus
 # ----------------------------------------------------
-health_status = {"alive": 1, "last_update": time.time()}
+health_status = {"alive": 1, "last_update": time.time(), "injections": 0}
+
 
 class MetricsHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -26,15 +32,24 @@ class MetricsHandler(BaseHTTPRequestHandler):
             metrics = (
                 f"faultinjector_health {health_status['alive']}\n"
                 f"faultinjector_uptime_seconds {uptime}\n"
+                f"faultinjector_total_injections {health_status['injections']}\n"
             )
             self.wfile.write(metrics.encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
 
+    def log_message(self, format, *args):
+        # Silence default HTTP logs
+        return
+
+
 def start_metrics_server():
+    """Starts a persistent /metrics HTTP endpoint with auto-recovery."""
     while True:
         try:
+            # Prevent socket reuse crash on restart
+            socket.setdefaulttimeout(5)
             server = HTTPServer(("0.0.0.0", METRICS_PORT), MetricsHandler)
             print(f"✅ Metrics endpoint running on port {METRICS_PORT} (/metrics)")
             server.serve_forever()
@@ -42,31 +57,35 @@ def start_metrics_server():
             print(f"⚠️ Metrics server crashed: {e}. Restarting in 5s...")
             time.sleep(5)
 
+
 def heartbeat_updater():
-    """Continuously updates the metrics heartbeat so Prometheus sees the target as alive."""
+    """Continuously updates Prometheus-visible health signals."""
     while True:
         health_status["alive"] = 1
         health_status["last_update"] = time.time()
-        time.sleep(15)  # Update every 15 seconds
+        time.sleep(15)
+
 
 # ----------------------------------------------------
-# 🧪 Fault injection logic (existing)
+# 🧪 Fault injection logic
 # ----------------------------------------------------
 def check_kubectl():
     if not shutil.which("kubectl"):
         print("❌ Error: 'kubectl' not found in container. Install it or rebuild the image.")
         sys.exit(1)
 
+
 def run_command(cmd):
-    print(f"Running: {cmd}")
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if result.returncode != 0:
-        print(f"⚠️ Command failed: {result.stderr.strip()}")
+        print(f"⚠️ Command failed: {cmd}\n{result.stderr.strip()}")
     return result.stdout.strip()
+
 
 def kill_pod(pod_name):
     print(f"💥 Killing pod {pod_name}...")
     run_command(f"kubectl delete pod {pod_name} -n {NAMESPACE}")
+
 
 def stress_cpu(pod_name, duration=30):
     print(f"🔥 Stressing CPU in pod {pod_name} for {duration}s...")
@@ -76,6 +95,7 @@ def stress_cpu(pod_name, duration=30):
     time.sleep(duration)
     run_command(f"kubectl exec {pod_name} -n {NAMESPACE} -- pkill yes")
     print("✅ CPU stress completed.")
+
 
 def stress_memory(pod_name, duration=30, size_mb=100):
     print(f"💾 Stressing memory in pod {pod_name} ({size_mb}MB) for {duration}s...")
@@ -87,14 +107,14 @@ def stress_memory(pod_name, duration=30, size_mb=100):
     run_command(f"kubectl exec {pod_name} -n {NAMESPACE} -- pkill -f 'python3 -c'")
     print("✅ Memory stress completed.")
 
+
 def get_pods():
-    output = run_command(
-        f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} -o name"
-    )
+    output = run_command(f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} -o name")
     pods = [p.replace("pod/", "") for p in output.splitlines()]
     if not pods:
         print("⚠️ No pods found with the given label.")
     return pods
+
 
 def inject_faults():
     check_kubectl()
@@ -114,16 +134,24 @@ def inject_faults():
         time.sleep(5)
         stress_cpu(pod)
         stress_memory(pod)
+        health_status["injections"] += 1
+
+
+def run_continuous_loop():
+    """Repeats fault injection periodically."""
+    while True:
+        print("🔁 Starting new fault injection cycle...")
+        inject_faults()
+        print(f"⏸️ Sleeping for {RECHECK_INTERVAL}s before next cycle...")
+        time.sleep(RECHECK_INTERVAL)
+
 
 # ----------------------------------------------------
 # 🚀 Main entrypoint
 # ----------------------------------------------------
 if __name__ == "__main__":
-    # Start /metrics endpoint in background
     threading.Thread(target=start_metrics_server, daemon=True).start()
-
-    # Start health heartbeat updater
     threading.Thread(target=heartbeat_updater, daemon=True).start()
 
-    # Run fault injector loop
-    inject_faults()
+    # Continuous operation
+    run_continuous_loop()

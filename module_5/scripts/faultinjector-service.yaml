@@ -1,0 +1,17 @@
+# module_5/k8s/faultinjector-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultinjector
+  namespace: monitoring
+  labels:
+    app: faultinjector
+spec:
+  selector:
+    app: faultinjector
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  type: ClusterIP
