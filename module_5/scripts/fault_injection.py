@@ -1,5 +1,5 @@
 # ============================================
-# module_5/scripts/fault_injection.py  ✅ FINAL
+# module_5/scripts/fault_injection.py  ✅ FINAL FIXED
 # ============================================
 
 import subprocess
@@ -18,23 +18,33 @@ RECHECK_INTERVAL = 300  # Run fault injection every 5 min
 # ----------------------------------------------------
 # 🩺 Simple /metrics endpoint for Prometheus
 # ----------------------------------------------------
-health_status = {"alive": 1, "last_update": time.time(), "injections": 0}
+health_status = {"alive": 1, "start_time": time.time(), "injections": 0}
 
 
 class MetricsHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/metrics":
-            self.send_response(200)
-            self.send_header("Content-type", "text/plain; version=0.0.4")
-            self.end_headers()
-
-            uptime = int(time.time() - health_status["last_update"])
-            metrics = (
-                f"faultinjector_health {health_status['alive']}\n"
-                f"faultinjector_uptime_seconds {uptime}\n"
-                f"faultinjector_total_injections {health_status['injections']}\n"
-            )
-            self.wfile.write(metrics.encode("utf-8"))
+            try:
+                uptime = int(time.time() - health_status["start_time"])
+                metrics = (
+                    "# HELP faultinjector_health Module 5 fault injector health (1=alive)\n"
+                    "# TYPE faultinjector_health gauge\n"
+                    f"faultinjector_health {health_status['alive']}\n"
+                    "# HELP faultinjector_uptime_seconds Module 5 uptime in seconds\n"
+                    "# TYPE faultinjector_uptime_seconds counter\n"
+                    f"faultinjector_uptime_seconds {uptime}\n"
+                    "# HELP faultinjector_total_injections Total number of fault injections performed\n"
+                    "# TYPE faultinjector_total_injections counter\n"
+                    f"faultinjector_total_injections {health_status['injections']}\n"
+                )
+                self.send_response(200)
+                self.send_header("Content-type", "text/plain; version=0.0.4")
+                self.end_headers()
+                self.wfile.write(metrics.encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f"# error: {e}\n".encode("utf-8"))
         else:
             self.send_response(404)
             self.end_headers()
@@ -45,10 +55,9 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
 
 def start_metrics_server():
-    """Starts a persistent /metrics HTTP endpoint with auto-recovery."""
+    """Persistent /metrics endpoint with retry on crash."""
     while True:
         try:
-            # Prevent socket reuse crash on restart
             socket.setdefaulttimeout(5)
             server = HTTPServer(("0.0.0.0", METRICS_PORT), MetricsHandler)
             print(f"✅ Metrics endpoint running on port {METRICS_PORT} (/metrics)")
@@ -62,7 +71,6 @@ def heartbeat_updater():
     """Continuously updates Prometheus-visible health signals."""
     while True:
         health_status["alive"] = 1
-        health_status["last_update"] = time.time()
         time.sleep(15)
 
 
@@ -89,9 +97,7 @@ def kill_pod(pod_name):
 
 def stress_cpu(pod_name, duration=30):
     print(f"🔥 Stressing CPU in pod {pod_name} for {duration}s...")
-    run_command(
-        f"kubectl exec {pod_name} -n {NAMESPACE} -- sh -c 'yes > /dev/null &'"
-    )
+    run_command(f"kubectl exec {pod_name} -n {NAMESPACE} -- sh -c 'yes > /dev/null &'")
     time.sleep(duration)
     run_command(f"kubectl exec {pod_name} -n {NAMESPACE} -- pkill yes")
     print("✅ CPU stress completed.")
@@ -123,9 +129,7 @@ def inject_faults():
         return
 
     for pod in pods:
-        status = run_command(
-            f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'"
-        )
+        status = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'")
         if status.lower() != "running":
             print(f"⚠️ Pod {pod} is not running ({status}). Skipping fault injection.")
             continue
@@ -138,10 +142,13 @@ def inject_faults():
 
 
 def run_continuous_loop():
-    """Repeats fault injection periodically."""
+    """Repeats fault injection periodically without blocking metrics endpoint."""
     while True:
         print("🔁 Starting new fault injection cycle...")
-        inject_faults()
+        try:
+            inject_faults()
+        except Exception as e:
+            print(f"⚠️ Fault injection error: {e}")
         print(f"⏸️ Sleeping for {RECHECK_INTERVAL}s before next cycle...")
         time.sleep(RECHECK_INTERVAL)
 

@@ -1,4 +1,6 @@
-# module_5/k8s/faultinjector-service.yaml
+# ============================================
+# module_5/k8s/faultinjector-service.yaml ✅ FINAL
+# ============================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,6 +8,8 @@ metadata:
   namespace: monitoring
   labels:
     app: faultinjector
+    module: "5"
+    phase: "fault-injection"
 spec:
   selector:
     app: faultinjector

@@ -75,10 +75,9 @@ spec:
     spec:
       containers:
       - args:
-        - "apt-get update && \\\napt-get install -y --no-install-recommends stress\
-          \ procps curl python3 python3-pip && \\\npip3 install requests && \\\necho\
-          \ \"\u2705 Fault Injector Ready: Running in 'monitoring' namespace (Module\
-          \ 5 integrated with Module 4 Remediator)\" && \\\nsleep infinity\n"
+        - "echo \"\u2705 Fault Injector Ready: Running in 'monitoring' namespace (Module\
+          \ 5 integrated with Module 4 Remediator')\";\nwhile true; do\n  python3\
+          \ /app/scripts/fault_injection.py;\n  sleep 60;\ndone\n"
         command:
         - /bin/bash
         - -c
@@ -90,13 +89,16 @@ spec:
         image: module5-faultinjector:latest
         imagePullPolicy: IfNotPresent
         name: faultinjector
+        ports:
+        - containerPort: 9090
+          name: metrics
         resources:
           limits:
-            cpu: 500m
-            memory: 256Mi
-          requests:
-            cpu: 200m
+            cpu: 100m
             memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false
       securityContext:
