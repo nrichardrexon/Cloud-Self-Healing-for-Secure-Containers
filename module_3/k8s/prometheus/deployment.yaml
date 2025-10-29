@@ -15,7 +15,7 @@ spec:
       labels:
         app: prometheus
     spec:
-      # Use the ServiceAccount we defined earlier
+      # Use the ServiceAccount defined in serviceaccount.yaml
       serviceAccountName: prometheus
 
       containers:
@@ -34,30 +34,32 @@ spec:
               name: web
 
           volumeMounts:
-            # Core Prometheus config
+            # Core Prometheus configuration
             - name: prometheus-config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
 
-            # Alert rules
+            # Alerting rules
             - name: prometheus-rules
               mountPath: /etc/prometheus/alert_rules
 
-            # Kubelet and cAdvisor scrape configs
+            # Scrape configs for kubelet and cadvisor
             - name: prometheus-kubelet
               mountPath: /etc/prometheus/kubernetes-kubelet.yaml
               subPath: prometheus.yml
+
             - name: prometheus-cadvisor
               mountPath: /etc/prometheus/kubernetes-cadvisor.yaml
               subPath: prometheus.yml
 
-          # Health checks
+          # Health probes
           livenessProbe:
             httpGet:
               path: /-/healthy
               port: 9090
             initialDelaySeconds: 10
             periodSeconds: 15
+
           readinessProbe:
             httpGet:
               path: /-/ready
@@ -73,19 +75,22 @@ spec:
               cpu: "500m"
               memory: "512Mi"
 
-      # ✅ Add default automount for service account token
+      # Allow Prometheus to access the service account token
       automountServiceAccountToken: true
 
       volumes:
         - name: prometheus-config
           configMap:
             name: prometheus-config
+
         - name: prometheus-rules
           configMap:
             name: prometheus-rules
+
         - name: prometheus-kubelet
           configMap:
             name: prometheus-kubernetes-kubelet
+
         - name: prometheus-cadvisor
           configMap:
             name: prometheus-kubernetes-cadvisor

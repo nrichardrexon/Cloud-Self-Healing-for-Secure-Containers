@@ -1,4 +1,10 @@
-# module_3_deploy_app.py
+# ===========================================
+# 📡 module_3_deploy_app.py
+# Deploys Prometheus & Alertmanager in Kubernetes,
+# verifies readiness, opens dashboards, and keeps
+# port-forward sessions active.
+# ===========================================
+
 import subprocess
 import sys
 import time
@@ -13,12 +19,15 @@ ALERT_SERVICE = "alertmanager"
 POD_READY_TIMEOUT = 180
 VERIFY_TIMEOUT = 60  # seconds for endpoint verification
 
+
 def run_command(cmd, check=True):
     """Run a shell command and print output."""
     try:
         print(f"Running: {cmd}")
-        result = subprocess.run(cmd, shell=True, check=check,
-                                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        result = subprocess.run(
+            cmd, shell=True, check=check,
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         print(result.stdout)
         return True
     except subprocess.CalledProcessError as e:
@@ -26,6 +35,7 @@ def run_command(cmd, check=True):
         if check:
             sys.exit(1)
         return False
+
 
 def wait_for_pods_ready(label_selector, namespace, timeout=180):
     """Wait until all pods with label_selector are ready."""
@@ -49,11 +59,14 @@ def wait_for_pods_ready(label_selector, namespace, timeout=180):
     print(f"⚠ Timeout reached. Pods may not be fully ready: {output}")
     return False
 
+
 def verify_service(service_name, port, timeout=60):
     """Verify that a service endpoint is reachable via port-forward."""
     print(f"⏳ Verifying {service_name} endpoint on port {port}...")
     pf_cmd = f"kubectl port-forward svc/{service_name} {port}:{port} -n {K8S_NAMESPACE}"
-    pf_proc = subprocess.Popen(pf_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pf_proc = subprocess.Popen(
+        pf_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     time.sleep(3)  # allow port-forward to start
 
     success = False
@@ -75,6 +88,7 @@ def verify_service(service_name, port, timeout=60):
     print(f"✅ Service {service_name} is reachable!")
     return pf_proc
 
+
 def open_dashboards_sequentially(dashboards):
     """Open multiple dashboards in separate browser tabs sequentially."""
     for url in dashboards:
@@ -83,25 +97,26 @@ def open_dashboards_sequentially(dashboards):
         time.sleep(2)  # small delay to ensure both tabs open
         print(f"🔗 Clickable URL: {url}")
 
+
 def deploy_module_3():
     """Deploy Prometheus and Alertmanager with namespace, secrets, and configs."""
-    print("=== Module 3 Deployment: Monitoring & Alerts ===")
+    print("=== 🚀 Module 3 Deployment: Monitoring & Alerts ===")
 
     # Namespace
-    run_command(f"kubectl apply -f module_3/k8s/namespace.yaml")
+    run_command("kubectl apply -f module_3/k8s/namespace.yaml")
 
     # Alertmanager secrets
-    run_command(f"kubectl apply -f module_3/k8s/alertmanager/secret.yaml")
+    run_command("kubectl apply -f module_3/k8s/alertmanager/secret.yaml")
 
     # ConfigMaps
-    run_command(f"kubectl apply -f module_3/k8s/prometheus/configmap.yaml")
-    run_command(f"kubectl apply -f module_3/k8s/alertmanager/configmap.yaml")
+    run_command("kubectl apply -f module_3/k8s/prometheus/configmap.yaml")
+    run_command("kubectl apply -f module_3/k8s/alertmanager/configmap.yaml")
 
     # Deployments & Services
-    run_command(f"kubectl apply -f module_3/k8s/prometheus/deployment.yaml")
-    run_command(f"kubectl apply -f module_3/k8s/prometheus/service.yaml")
-    run_command(f"kubectl apply -f module_3/k8s/alertmanager/deployment.yaml")
-    run_command(f"kubectl apply -f module_3/k8s/alertmanager/service.yaml")
+    run_command("kubectl apply -f module_3/k8s/prometheus/deployment.yaml")
+    run_command("kubectl apply -f module_3/k8s/prometheus/service.yaml")
+    run_command("kubectl apply -f module_3/k8s/alertmanager/deployment.yaml")
+    run_command("kubectl apply -f module_3/k8s/alertmanager/service.yaml")
 
     # Wait for pods ready
     if not wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, POD_READY_TIMEOUT):
@@ -133,6 +148,7 @@ def deploy_module_3():
         prom_pf_proc.terminate()
         alert_pf_proc.terminate()
         print("✅ Port-forward processes terminated. Module 3 session ended.")
+
 
 if __name__ == "__main__":
     deploy_module_3()

@@ -1,5 +1,5 @@
 # ============================================================
-# Module 4 — Remediator & Actions (Final Version – Stable & Monitored)
+# Module 4 — Remediator & Actions (Final Stable Version)
 # ============================================================
 
 from fastapi import FastAPI, Request
@@ -22,7 +22,7 @@ except ImportError:
 # ---------------------------------------------------------
 # App setup
 # ---------------------------------------------------------
-app = FastAPI(title="Module 4 Remediator", version="1.0.2")
+app = FastAPI(title="Module 4 Remediator", version="1.0.3")
 
 # ---------------------------------------------------------
 # Logging setup (safe for non-root container)
@@ -40,7 +40,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger("remediator")
-
 logger.info(f"📂 Logging initialized at {LOG_PATH}")
 
 # ---------------------------------------------------------

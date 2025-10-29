@@ -1,3 +1,6 @@
+# ==========================================
+# 🧠 Prometheus ConfigMap (Final Fixed)
+# ==========================================
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -51,17 +54,16 @@ data:
               module: "module-2"
 
       # ----------------------------
-      # ✅ Module 4 - Remediator Service (Fixed target)
+      # ✅ Module 4 - Remediator Service (Namespace fix)
       # ----------------------------
       - job_name: 'remediator'
         metrics_path: /metrics
         static_configs:
-          - targets: ['remediator.monitoring.svc.cluster.local:8080']
+          - targets: ['remediator.monitoring.svc.cluster.local:8080']   # ← fixed target
             labels:
               module: "module-4"
               environment: "dev-lab"
               role: "remediator-service"
-
 
       # ----------------------------
       # Module 5 - Fault Injector
@@ -95,7 +97,7 @@ data:
               source: "kube-state"
 
       # ----------------------------
-      # ✅ Kubernetes Nodes — cAdvisor (Fixed permissions)
+      # ✅ Kubernetes Nodes — cAdvisor
       # ----------------------------
       - job_name: 'kubernetes-cadvisor'
         scheme: https
@@ -114,10 +116,9 @@ data:
           - source_labels: [__name__]
             regex: '(container_cpu_usage_seconds_total|container_memory_usage_bytes|container_fs_usage_bytes)'
             action: keep
-        # 🚫 Removed 'authorization:' (conflicts with bearer_token_file)
 
       # ----------------------------
-      # ✅ Kubernetes Kubelet (Fixed permissions)
+      # ✅ Kubernetes Kubelet
       # ----------------------------
       - job_name: 'kubernetes-kubelet'
         scheme: https
@@ -136,7 +137,6 @@ data:
           - source_labels: [__name__]
             regex: '(kubelet_running_pods|kubelet_running_containers|kubelet_volume_stats_available_bytes)'
             action: keep
-        # 🚫 Removed 'authorization:' (conflicts with bearer_token_file)
 
     # ==============================================
     # 📜 Alert Rules
