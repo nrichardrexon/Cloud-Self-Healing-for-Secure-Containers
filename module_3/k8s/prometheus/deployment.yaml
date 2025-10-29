@@ -15,6 +15,7 @@ spec:
       labels:
         app: prometheus
     spec:
+      serviceAccountName: prometheus
       containers:
         - name: prometheus
           image: prom/prometheus:latest
@@ -22,14 +23,26 @@ spec:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"
             - "--web.listen-address=:9090"
+            - "--web.enable-lifecycle"
           ports:
             - containerPort: 9090
               name: web
           volumeMounts:
+            # 🧩 Core configuration
             - name: prometheus-config
               mountPath: /etc/prometheus
             - name: prometheus-rules
               mountPath: /etc/prometheus/alert_rules
+
+            # 🧠 Additional Kubernetes scrape configs
+            - name: prometheus-kubelet
+              mountPath: /etc/prometheus/kubernetes-kubelet.yaml
+              subPath: prometheus-kubernetes-kubelet.yaml
+            - name: prometheus-cadvisor
+              mountPath: /etc/prometheus/kubernetes-cadvisor.yaml
+              subPath: prometheus-kubernetes-cadvisor.yaml
+
+          # ✅ Health checks
           livenessProbe:
             httpGet:
               path: /-/healthy
@@ -43,6 +56,8 @@ spec:
               port: 9090
             initialDelaySeconds: 5
             periodSeconds: 10
+
+          # 💡 Resource limits
           resources:
             requests:
               cpu: "100m"
@@ -50,10 +65,20 @@ spec:
             limits:
               cpu: "500m"
               memory: "512Mi"
+
       volumes:
+        # Core Prometheus Configs
         - name: prometheus-config
           configMap:
             name: prometheus-config
         - name: prometheus-rules
           configMap:
             name: prometheus-rules
+
+        # 🧩 New: Kubernetes metric sources
+        - name: prometheus-kubelet
+          configMap:
+            name: prometheus-kubernetes-kubelet
+        - name: prometheus-cadvisor
+          configMap:
+            name: prometheus-kubernetes-cadvisor

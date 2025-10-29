@@ -7,6 +7,7 @@ data:
   alertmanager.yml: |
     global:
       resolve_timeout: 1m
+      smtp_require_tls: true
 
     route:
       receiver: 'default-receiver'
@@ -34,11 +35,11 @@ data:
           receiver: 'remediator-webhook'
           continue: true
 
-        # 📩 Default route for unmatched alerts
+        # 🧩 Default Fallback
         - receiver: 'default-receiver'
 
     receivers:
-      # 🧠 Remediator Webhook Receiver (primary automation)
+      # 🧠 Primary automation receiver for remediation
       - name: 'remediator-webhook'
         webhook_configs:
           - url: 'http://remediator.monitoring.svc.cluster.local:8080/remediate'
@@ -46,14 +47,17 @@ data:
             http_config:
               follow_redirects: true
               enable_http2: true
+            max_alerts: 10
 
-      # ✉️ Default Fallback Receiver (notification only)
+      # ✉️ Fallback / Test receiver (logs instead of real email)
       - name: 'default-receiver'
         email_configs:
-          - to: 'alerts-team@example.com'
+          - to: 'alerts-log@example.com'
             from: 'no-reply@example.com'
             smarthost: 'smtp.gmail.com:587'
             auth_username: 'no-reply@example.com'
             auth_identity: 'no-reply@example.com'
             auth_password: 'change_me'
             send_resolved: true
+            headers:
+              subject: '[TEST ALERT] Fallback route triggered'

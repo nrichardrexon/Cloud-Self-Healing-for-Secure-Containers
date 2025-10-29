@@ -3,61 +3,143 @@ kind: ConfigMap
 metadata:
   name: prometheus-config
   namespace: monitoring
+  labels:
+    app: prometheus
+    component: monitoring
+    managed_by: "configmap"
 data:
   prometheus.yml: |
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
+      external_labels:
+        environment: "dev-lab"
+        project: "cloud-self-healing"
+        managed_by: "prometheus"
 
-    # ----------------------------
-    # 📊 Scrape Targets
-    # ----------------------------
+    # ==============================================
+    # 📊 Scrape Targets — Modules & System Metrics
+    # ==============================================
     scrape_configs:
+      # ----------------------------
+      # Prometheus Self-Monitoring
+      # ----------------------------
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
+            labels:
+              group: "core"
 
       # ----------------------------
-      # Module 1 App
+      # Module 1 - Sample App
       # ----------------------------
       - job_name: 'module-1-app'
         metrics_path: /metrics
         static_configs:
           - targets: ['sample-app-service.default.svc.cluster.local:80']
+            labels:
+              module: "module-1"
 
       # ----------------------------
-      # Module 2 App
+      # Module 2 - Extended Sample App
       # ----------------------------
       - job_name: 'module-2-app'
         metrics_path: /metrics
         static_configs:
           - targets: ['module-2-sample-app-service.default.svc.cluster.local:8000']
+            labels:
+              module: "module-2"
 
       # ----------------------------
-      # Remediator (Module 4)
+      # Module 4 - Remediator Service
       # ----------------------------
       - job_name: 'remediator'
         metrics_path: /metrics
         static_configs:
           - targets: ['remediator.monitoring.svc.cluster.local:8080']
+            labels:
+              module: "module-4"
 
       # ----------------------------
-      # Fault Injector (Module 5)
+      # Module 5 - Fault Injector
       # ----------------------------
       - job_name: 'faultinjector'
         metrics_path: /metrics
         static_configs:
-          - targets: ['test-remediator.monitoring.svc.cluster.local:9090']
+          - targets: ['faultinjector.monitoring.svc.cluster.local:9090']
+            labels:
+              module: "module-5"
 
-    # ----------------------------
+      # ----------------------------
+      # 🧠 Node Exporter (Host-level Metrics)
+      # ----------------------------
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter.monitoring.svc.cluster.local:9100']
+            labels:
+              source: "node-metrics"
+
+      # ----------------------------
+      # 🧩 Kube-State-Metrics (Cluster State)
+      # ----------------------------
+      - job_name: 'kube-state-metrics'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+            labels:
+              source: "kube-state"
+
+      # ----------------------------
+      # 🧩 Kubernetes Nodes — cAdvisor
+      # ----------------------------
+      - job_name: 'kubernetes-cadvisor'
+        scheme: https
+        tls_config:
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        metrics_path: /metrics/cadvisor
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: instance
+            source_labels: [__meta_kubernetes_node_name]
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: '(container_cpu_usage_seconds_total|container_memory_usage_bytes|container_fs_usage_bytes)'
+            action: keep
+
+      # ----------------------------
+      # 🧩 Kubernetes Kubelet (Node-level Metrics)
+      # ----------------------------
+      - job_name: 'kubernetes-kubelet'
+        scheme: https
+        tls_config:
+          insecure_skip_verify: true
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubernetes_sd_configs:
+          - role: node
+        metrics_path: /metrics
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+          - target_label: instance
+            source_labels: [__meta_kubernetes_node_name]
+        metric_relabel_configs:
+          - source_labels: [__name__]
+            regex: '(kubelet_running_pods|kubelet_running_containers|kubelet_volume_stats_available_bytes)'
+            action: keep
+
+    # ==============================================
     # 📜 Alert Rules
-    # ----------------------------
+    # ==============================================
     rule_files:
       - "/etc/prometheus/alert_rules/*.yml"
 
-    # ----------------------------
-    # 🚨 Alertmanager Integration
-    # ----------------------------
+    # ==============================================
+    # 🚨 Alertmanager Integration (with Remediator)
+    # ==============================================
     alerting:
       alertmanagers:
         - static_configs:

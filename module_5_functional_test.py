@@ -1,6 +1,6 @@
 # =========================================
-# ✅ module_5_functional_test.py (Final Updated for Module 5 Plan)
-# Purpose: Validate self-healing by injecting controlled faults
+# ✅ module_5_functional_test.py (Final Updated - Cluster-Consistent)
+# Purpose: Validate self-healing by injecting controlled faults and verifying alerts
 # =========================================
 
 import subprocess
@@ -17,7 +17,9 @@ NAMESPACE = "monitoring"
 LABEL_SELECTOR = "app=faultinjector"
 PROMETHEUS_URL = "http://prometheus.monitoring.svc.cluster.local:9090/api/v1/query"
 LOG_FILE = Path(__file__).parent / "functional_test.log"
-EXPECTED_IMAGE = "ubuntu:22.04"  # matches new test-deployment.yaml
+EXPECTED_IMAGE = "ubuntu:22.04"  # matches new test-remediator.yaml
+FAULTY_IMAGE = "busybox:nonexistent"  # deliberately broken for test
+PROMETHEUS_TIMEOUT = 90  # seconds
 
 # ========================
 # Logging setup
@@ -48,13 +50,14 @@ def run_command(cmd: str):
 
 
 def get_target_pods(label=LABEL_SELECTOR):
+    """Return list of pods matching label."""
     pods_output = run_command(f"kubectl get pods -l {label} -n {NAMESPACE} -o name")
     pods = [p for p in pods_output.splitlines() if p.strip()]
     return pods
 
 
 def wait_for_pods_ready(label=LABEL_SELECTOR, timeout=90):
-    """Wait until all pods are ready (or timeout)."""
+    """Wait until all pods with the label are ready."""
     print("⏳ Waiting for all pods to be ready...")
     start_time = time.time()
     while True:
@@ -110,22 +113,25 @@ def deploy_faulty_image():
     """Deploy intentionally broken image to test remediator recovery."""
     print("⚡ Deploying faulty image to test remediator")
     run_command(
-        f"kubectl set image deployment/test-remediator "
-        f"faultinjector=busybox:nonexistent -n {NAMESPACE}"
+        f"kubectl set image deployment/test-remediator faultinjector={FAULTY_IMAGE} -n {NAMESPACE}"
     )
-    logging.info("Faulty image deployed to test-remediator")
+    logging.info(f"Faulty image '{FAULTY_IMAGE}' deployed to test-remediator")
 
 
 # ========================
 # Prometheus alert verification
 # ========================
-def check_prometheus_alert(alert_name, timeout=60):
+def check_prometheus_alert(alert_name, timeout=PROMETHEUS_TIMEOUT):
     """Check if a given Prometheus alert fired within timeout."""
     print(f"⏳ Checking for Prometheus alert: {alert_name}")
     start_time = time.time()
     while time.time() - start_time < timeout:
         try:
-            response = requests.get(PROMETHEUS_URL, params={"query": f"ALERTS{{alertname='{alert_name}'}}"})
+            response = requests.get(
+                PROMETHEUS_URL,
+                params={"query": f"ALERTS{{alertname='{alert_name}', alertstate='firing'}}"},
+                timeout=10
+            )
             if response.status_code == 200:
                 data = response.json()
                 if data.get("data", {}).get("result"):
@@ -134,7 +140,7 @@ def check_prometheus_alert(alert_name, timeout=60):
                     return True
         except Exception as e:
             logging.error(f"Prometheus query failed: {e}")
-        time.sleep(5)
+        time.sleep(10)
     print(f"⚠️ Alert '{alert_name}' not detected within timeout")
     logging.warning(f"Alert '{alert_name}' not detected")
     return False
@@ -147,7 +153,6 @@ def validate_remediator():
     """Confirm that the remediator restored normal state."""
     print("⏳ Validating remediator actions...")
 
-    # Wait for recovery
     if not wait_for_pods_ready(timeout=90):
         print("❌ Pods did not recover in time")
         logging.error("Pods did not recover in time")
@@ -169,6 +174,7 @@ def validate_remediator():
 
     desired = run_command(f"kubectl get deployment test-remediator -n {NAMESPACE} -o jsonpath='{{.spec.replicas}}'")
     ready = run_command(f"kubectl get deployment test-remediator -n {NAMESPACE} -o jsonpath='{{.status.readyReplicas}}'")
+
     if desired != ready:
         print(f"❌ Deployment replica mismatch: desired={desired}, ready={ready}")
         logging.error(f"Replica mismatch: desired={desired}, ready={ready}")
@@ -186,7 +192,6 @@ def validate_remediator():
 def run_functional_tests():
     print("=== 🚀 Starting Module 5 Functional Tests ===")
 
-    # Initial check
     wait_for_pods_ready()
     pods = get_target_pods()
     if not pods:

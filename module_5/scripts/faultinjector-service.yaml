@@ -1,6 +1,101 @@
-# ============================================
-# module_5/k8s/faultinjector-service.yaml ✅ FINAL
-# ============================================
+# ================================================
+# Module 5 - Fault Injector (Aligned with Module 4)
+# ================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: faultinjector-sa
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: faultinjector-role
+  namespace: monitoring
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/exec", "pods/log", "events"]
+  verbs: ["get", "list", "delete", "create", "update", "patch", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: faultinjector-rolebinding
+  namespace: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: faultinjector-role
+subjects:
+- kind: ServiceAccount
+  name: faultinjector-sa
+  namespace: monitoring
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-remediator
+  namespace: monitoring
+  labels:
+    app: faultinjector
+    module: "5"
+    phase: fault-injection
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: faultinjector
+  template:
+    metadata:
+      labels:
+        app: faultinjector
+        managed-by: remediator
+    spec:
+      serviceAccountName: faultinjector-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: faultinjector
+        image: module5-faultinjector:latest
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          echo "✅ Fault Injector Ready: Running in 'monitoring' namespace (Module 5 integrated with Module 4 Remediator)";
+          while true; do
+            python3 /app/scripts/fault_injection.py;
+            sleep 60;
+          done
+        env:
+        - name: NAMESPACE
+          value: monitoring
+        - name: LABEL_SELECTOR
+          value: app=faultinjector
+        - name: REMEDIATION_MODE
+          value: faultinject
+        ports:
+        - containerPort: 9090
+          name: metrics
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,14 +103,12 @@ metadata:
   namespace: monitoring
   labels:
     app: faultinjector
-    module: "5"
-    phase: "fault-injection"
 spec:
+  type: ClusterIP
+  ports:
+  - port: 9090
+    targetPort: 9090
+    protocol: TCP
+    name: metrics
   selector:
     app: faultinjector
-  ports:
-    - name: metrics
-      port: 9090
-      targetPort: 9090
-      protocol: TCP
-  type: ClusterIP
