@@ -51,7 +51,7 @@ data:
               module: "module-2"
 
       # ----------------------------
-      # Module 4 - Remediator Service
+      # ✅ Module 4 - Remediator Service (Fixed target)
       # ----------------------------
       - job_name: 'remediator'
         metrics_path: /metrics
@@ -59,6 +59,9 @@ data:
           - targets: ['remediator.monitoring.svc.cluster.local:8080']
             labels:
               module: "module-4"
+              environment: "dev-lab"
+              role: "remediator-service"
+
 
       # ----------------------------
       # Module 5 - Fault Injector
@@ -69,9 +72,11 @@ data:
           - targets: ['faultinjector.monitoring.svc.cluster.local:9090']
             labels:
               module: "module-5"
+              role: "fault-injector"
+              environment: "testing"
 
       # ----------------------------
-      # 🧠 Node Exporter (Host-level Metrics)
+      # 🧠 Node Exporter
       # ----------------------------
       - job_name: 'node-exporter'
         static_configs:
@@ -80,7 +85,7 @@ data:
               source: "node-metrics"
 
       # ----------------------------
-      # 🧩 Kube-State-Metrics (Cluster State)
+      # 🧩 Kube-State-Metrics
       # ----------------------------
       - job_name: 'kube-state-metrics'
         metrics_path: /metrics
@@ -90,7 +95,7 @@ data:
               source: "kube-state"
 
       # ----------------------------
-      # 🧩 Kubernetes Nodes — cAdvisor
+      # ✅ Kubernetes Nodes — cAdvisor (Fixed permissions)
       # ----------------------------
       - job_name: 'kubernetes-cadvisor'
         scheme: https
@@ -109,9 +114,10 @@ data:
           - source_labels: [__name__]
             regex: '(container_cpu_usage_seconds_total|container_memory_usage_bytes|container_fs_usage_bytes)'
             action: keep
+        # 🚫 Removed 'authorization:' (conflicts with bearer_token_file)
 
       # ----------------------------
-      # 🧩 Kubernetes Kubelet (Node-level Metrics)
+      # ✅ Kubernetes Kubelet (Fixed permissions)
       # ----------------------------
       - job_name: 'kubernetes-kubelet'
         scheme: https
@@ -130,6 +136,7 @@ data:
           - source_labels: [__name__]
             regex: '(kubelet_running_pods|kubelet_running_containers|kubelet_volume_stats_available_bytes)'
             action: keep
+        # 🚫 Removed 'authorization:' (conflicts with bearer_token_file)
 
     # ==============================================
     # 📜 Alert Rules
@@ -138,7 +145,7 @@ data:
       - "/etc/prometheus/alert_rules/*.yml"
 
     # ==============================================
-    # 🚨 Alertmanager Integration (with Remediator)
+    # 🚨 Alertmanager Integration
     # ==============================================
     alerting:
       alertmanagers:
