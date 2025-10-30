@@ -76,8 +76,8 @@ spec:
       containers:
       - args:
         - "echo \"\u2705 Fault Injector Ready: Running in 'monitoring' namespace (Module\
-          \ 5 integrated with Module 4 Remediator')\";\nwhile true; do\n  python3\
-          \ /app/scripts/fault_injection.py;\n  sleep 60;\ndone\n"
+          \ 5 integrated with Module 4 Remediator)\";\nwhile true; do\n  python3 /app/scripts/fault_injection.py;\n\
+          \  sleep 60;\ndone\n"
         command:
         - /bin/bash
         - -c
@@ -86,6 +86,8 @@ spec:
           value: monitoring
         - name: LABEL_SELECTOR
           value: app=faultinjector
+        - name: PROMETHEUS_URL
+          value: http://prometheus.monitoring.svc.cluster.local:9090
         image: module5-faultinjector:latest
         imagePullPolicy: IfNotPresent
         name: faultinjector
@@ -105,3 +107,17 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       serviceAccountName: faultinjector-sa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: faultinjector
+  namespace: monitoring
+spec:
+  ports:
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+  selector:
+    app: faultinjector
+  type: ClusterIP

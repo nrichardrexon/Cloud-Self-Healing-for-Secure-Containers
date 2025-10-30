@@ -1,93 +1,20 @@
-2025-10-29 23:43:45,062 - INFO - true
-2025-10-29 23:43:45,124 - INFO - pod/test-remediator-55bff5944-gv2h9
-2025-10-29 23:43:45,560 - ERROR - Command failed: kubectl exec -n monitoring pod/test-remediator-55bff5944-gv2h9 -- bash -c "apt-get update && apt-get install -y stress && stress --cpu 2 --timeout 5"
-Reading package lists...
-E: List directory /var/lib/apt/lists/partial is missing. - Acquire (13: Permission denied)
-command terminated with exit code 100
-
-2025-10-29 23:43:45,560 - INFO - CPU stress applied to pod/test-remediator-55bff5944-gv2h9 for 5s
-2025-10-29 23:43:45,765 - ERROR - Command failed: kubectl exec -n monitoring pod/test-remediator-55bff5944-gv2h9 -- bash -c "apt-get update && apt-get install -y stress && stress --vm 1 --vm-bytes 50M --timeout 5"
-Reading package lists...
-E: List directory /var/lib/apt/lists/partial is missing. - Acquire (13: Permission denied)
-command terminated with exit code 100
-
-2025-10-29 23:43:45,765 - INFO - Memory stress applied to pod/test-remediator-55bff5944-gv2h9 for 5s
-2025-10-29 23:43:45,789 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93515e29f0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:43:55,806 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c4e60>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:05,821 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5520>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:15,829 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5be0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:25,976 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c62a0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:35,989 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c6960>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:45,998 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5bb0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:44:56,010 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5be0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:06,050 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighCPUUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5640>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:16,050 - WARNING - Alert 'HighCPUUsage' not detected
-2025-10-29 23:45:16,058 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c4b00>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:26,067 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c70e0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:36,076 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c7950>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:46,084 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c6d50>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:45:56,091 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c4b00>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:06,111 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5160>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:16,119 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5940>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:26,127 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c7c50>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:36,139 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27HighMemoryUsage%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505fc560>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:46,139 - WARNING - Alert 'HighMemoryUsage' not detected
-2025-10-29 23:46:46,203 - INFO - true
-2025-10-29 23:46:46,257 - INFO - pod/test-remediator-55bff5944-xtrmd
-2025-10-29 23:46:46,310 - INFO - module5-faultinjector:latest
-2025-10-29 23:46:46,310 - ERROR - Pod pod/test-remediator-55bff5944-xtrmd has wrong image: module5-faultinjector:latest
-2025-10-29 23:46:46,365 - INFO - 1
-2025-10-29 23:46:46,425 - INFO - 1
-2025-10-29 23:46:46,485 - ERROR - Command failed: kubectl exec -n monitoring pod/test-remediator-55bff5944-gv2h9 -- bash -c "pgrep -o python3 || echo ''"
-Error from server (NotFound): pods "test-remediator-55bff5944-gv2h9" not found
-
-2025-10-29 23:46:46,486 - WARNING - No python process found in pod/test-remediator-55bff5944-gv2h9
-2025-10-29 23:46:46,494 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5cd0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:46:56,507 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c4cb0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:06,515 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c6ff0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:16,529 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c7500>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:26,538 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b935162eea0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:36,557 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505fce00>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:46,576 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c4aa0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:47:56,585 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c52e0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:06,593 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27ContainerCrash%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c59a0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:16,593 - WARNING - Alert 'ContainerCrash' not detected
-2025-10-29 23:48:16,653 - INFO - true
-2025-10-29 23:48:16,753 - INFO - pod/test-remediator-55bff5944-zwp97
-2025-10-29 23:48:16,806 - INFO - module5-faultinjector:latest
-2025-10-29 23:48:16,806 - ERROR - Pod pod/test-remediator-55bff5944-zwp97 has wrong image: module5-faultinjector:latest
-2025-10-29 23:48:16,861 - INFO - 1
-2025-10-29 23:48:16,916 - INFO - 1
-2025-10-29 23:48:16,993 - INFO - deployment.apps/test-remediator image updated
-2025-10-29 23:48:16,994 - INFO - Faulty image 'busybox:nonexistent' deployed to test-remediator
-2025-10-29 23:48:17,005 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c79b0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:27,012 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c6000>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:37,020 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505fd6a0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:47,034 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5e20>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:48:57,047 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c5a00>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:49:07,098 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c6b70>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:49:17,109 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505c49e0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:49:27,116 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505264e0>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:49:37,131 - ERROR - Prometheus query failed: HTTPConnectionPool(host='prometheus.monitoring.svc.cluster.local', port=9090): Max retries exceeded with url: /api/v1/query?query=ALERTS%7Balertname%3D%27DeploymentFailed%27%2C+alertstate%3D%27firing%27%7D (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x7b93505fdf40>: Failed to resolve 'prometheus.monitoring.svc.cluster.local' ([Errno -2] Name or service not known)"))
-2025-10-29 23:49:47,131 - WARNING - Alert 'DeploymentFailed' not detected
-2025-10-29 23:49:47,193 - INFO - true false
-2025-10-29 23:49:52,247 - INFO - true false
-2025-10-29 23:49:57,302 - INFO - true false
-2025-10-29 23:50:02,367 - INFO - true false
-2025-10-29 23:50:07,422 - INFO - true false
-2025-10-29 23:50:12,474 - INFO - true false
-2025-10-29 23:50:17,529 - INFO - true false
-2025-10-29 23:50:22,581 - INFO - true false
-2025-10-29 23:50:27,632 - INFO - true false
-2025-10-29 23:50:32,691 - INFO - true true false
-2025-10-29 23:50:37,752 - INFO - true true false
-2025-10-29 23:50:42,828 - INFO - true true false
-2025-10-29 23:50:47,914 - INFO - true true false
-2025-10-29 23:50:52,972 - INFO - true true false
-2025-10-29 23:50:58,032 - INFO - true true false
-2025-10-29 23:51:03,097 - INFO - true false
-2025-10-29 23:51:08,173 - INFO - true false
-2025-10-29 23:51:13,239 - INFO - true false
-2025-10-29 23:51:18,295 - INFO - true false
-2025-10-29 23:51:18,296 - ERROR - Pods did not recover in time
-2025-10-29 23:51:18,296 - INFO - Functional testing finished successfully
+2025-10-30 07:01:30,230 - INFO - false true
+2025-10-30 07:01:35,294 - INFO - false true true
+2025-10-30 07:01:40,492 - INFO - false true true true
+2025-10-30 07:01:45,561 - INFO - false true true true
+2025-10-30 07:01:50,631 - INFO - false true true true
+2025-10-30 07:01:55,696 - INFO - false true true true
+2025-10-30 07:02:00,823 - INFO - false true true true
+2025-10-30 07:02:05,963 - INFO - false true true true
+2025-10-30 07:02:11,030 - INFO - false true true
+2025-10-30 07:02:16,097 - INFO - false true
+2025-10-30 07:02:21,166 - INFO - false true true
+2025-10-30 07:02:26,241 - INFO - false true true true
+2025-10-30 07:02:31,315 - INFO - false true true true
+2025-10-30 07:02:36,380 - INFO - false true true true
+2025-10-30 07:02:41,443 - INFO - false true true true
+2025-10-30 07:02:46,516 - INFO - false true true true
+2025-10-30 07:02:51,577 - INFO - false true true
+2025-10-30 07:02:56,638 - INFO - false true
+2025-10-30 07:03:01,790 - INFO - false true false
+2025-10-30 07:03:01,790 - ERROR - Pods not ready at start; aborting tests.

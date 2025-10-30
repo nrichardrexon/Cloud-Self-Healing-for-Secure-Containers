@@ -1,0 +1,5 @@
+docker build --no-cache -t module5-faultinjector:latest -f module_5/Dockerfile .
+kind load docker-image module5-faultinjector:latest --name selfhealing-cluster
+kubectl delete pod -l app=faultinjector -n monitoring --ignore-not-found
+kubectl apply -f module_5/k8s/test-deployment.yaml -n monitoring
+kubectl logs -n monitoring -l app=faultinjector --tail=50 -f
