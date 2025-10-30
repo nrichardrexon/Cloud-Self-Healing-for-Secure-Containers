@@ -92,7 +92,8 @@ def deploy_module_3():
 
     # Alertmanager secrets
     run_command(f"kubectl apply -f module_3/k8s/alertmanager/secret.yaml")
-
+    #Alertrules
+    #run_command(f"kubectl apply -f module_3/alert_rules/alert_rules.yml")
     # ConfigMaps
     run_command(f"kubectl apply -f module_3/k8s/prometheus/configmap.yaml")
     run_command(f"kubectl apply -f module_3/k8s/alertmanager/configmap.yaml")

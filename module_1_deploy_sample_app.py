@@ -71,7 +71,7 @@ def deploy_app():
     run_command("kubectl apply -f k8s/deployment.yaml")
     run_command("kubectl apply -f k8s/service.yaml")
     wait_for_pods_ready(DEPLOYMENT_NAME, K8S_NAMESPACE, timeout=POD_READY_TIMEOUT)
-    run_command(f"kubectl get pods,svc -n {K8S_NAMESPACE}")
+    run_command(f"git ,svc -n {K8S_NAMESPACE}")
     print("\n✅ Sample app deployment complete and ready!")
 
 def main():

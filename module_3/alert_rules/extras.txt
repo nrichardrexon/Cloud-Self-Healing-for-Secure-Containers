@@ -1,0 +1,2 @@
+ kubectl create configmap prometheus-rules --from-file=/workspaces/Cloud-Self-Healing-for-Secure-Containers/module_3/alert_rules/alert_rules.yml -n mo
+nitoring
