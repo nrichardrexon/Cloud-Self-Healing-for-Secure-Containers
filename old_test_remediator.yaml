@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    deployment.kubernetes.io/revision: "9"
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"labels":{"app":"faultinjector","module":"5","phase":"fault-injection"},"name":"test-remediator","namespace":"monitoring"},"spec":{"replicas":1,"selector":{"matchLabels":{"app":"faultinjector"}},"template":{"metadata":{"labels":{"app":"faultinjector","managed-by":"remediator"}},"spec":{"containers":[{"args":["echo \"✅ Fault Injector Ready: Running in 'monitoring' namespace (Module 5 integrated with Module 4 Remediator)\";\nwhile true; do\n  python3 /app/scripts/fault_injection.py;\n  sleep 60;\ndone\n"],"command":["/bin/bash","-c"],"env":[{"name":"NAMESPACE","value":"monitoring"},{"name":"LABEL_SELECTOR","value":"app=faultinjector"},{"name":"PROMETHEUS_URL","value":"http://prometheus.monitoring.svc.cluster.local:9090"}],"image":"module5-faultinjector:latest","imagePullPolicy":"IfNotPresent","name":"faultinjector","ports":[{"containerPort":9090,"name":"metrics"}],"resources":{"limits":{"cpu":"100m","memory":"128Mi"},"requests":{"cpu":"50m","memory":"64Mi"}},"securityContext":{"allowPrivilegeEscalation":false}}],"securityContext":{"runAsNonRoot":true,"runAsUser":1000},"serviceAccountName":"faultinjector-sa"}}}}
+  creationTimestamp: "2025-10-31T01:24:14Z"
+  generation: 9
+  labels:
+    app: faultinjector
+    module: "5"
+    phase: fault-injection
+  name: test-remediator
+  namespace: monitoring
+  resourceVersion: "19570"
+  uid: c57346bb-a3be-42a6-974e-333330482442
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: faultinjector
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/restartedAt: "2025-10-31T05:22:05Z"
+      creationTimestamp: null
+      labels:
+        app: faultinjector
+        managed-by: remediator
+    spec:
+      containers:
+      - args:
+        - |
+          echo "✅ Fault Injector Ready: Running in 'monitoring' namespace (Module 5 integrated with Module 4 Remediator)";
+          while true; do
+            python3 /app/scripts/fault_injection.py;
+            sleep 60;
+          done
+        command:
+        - /bin/bash
+        - -c
+        env:
+        - name: NAMESPACE
+          value: monitoring
+        - name: LABEL_SELECTOR
+          value: app=faultinjector
+        - name: PROMETHEUS_URL
+          value: http://prometheus.monitoring.svc.cluster.local:9090
+        image: faultinjector:latest
+        imagePullPolicy: IfNotPresent
+        name: faultinjector
+        ports:
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccount: faultinjector-sa
+      serviceAccountName: faultinjector-sa
+      terminationGracePeriodSeconds: 30
+status:
+  availableReplicas: 1
+  conditions:
+  - lastTransitionTime: "2025-10-31T05:58:10Z"
+    lastUpdateTime: "2025-10-31T05:58:10Z"
+    message: Deployment has minimum availability.
+    reason: MinimumReplicasAvailable
+    status: "True"
+    type: Available
+  - lastTransitionTime: "2025-10-31T04:57:15Z"
+    lastUpdateTime: "2025-10-31T05:58:14Z"
+    message: ReplicaSet "test-remediator-8f7ddfb76" has successfully progressed.
+    reason: NewReplicaSetAvailable
+    status: "True"
+    type: Progressing
+  observedGeneration: 9
+  readyReplicas: 1
+  replicas: 1
+  updatedReplicas: 1

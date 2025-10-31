@@ -1,5 +1,5 @@
 # ===========================================
-# 📡 module_3_deploy_app.py
+# 📡 module_3_deploy_app.py (Final Patched Version)
 # Deploys Prometheus & Alertmanager in Kubernetes,
 # verifies readiness, opens dashboards, and keeps
 # port-forward sessions active.
@@ -94,8 +94,35 @@ def open_dashboards_sequentially(dashboards):
     for url in dashboards:
         print(f"🌐 Opening dashboard: {url}")
         webbrowser.open_new_tab(url)
-        time.sleep(2)  # small delay to ensure both tabs open
+        time.sleep(2)
         print(f"🔗 Clickable URL: {url}")
+
+
+def ensure_prometheus_configmaps():
+    """Ensure all Prometheus ConfigMaps exist before deployment."""
+    print("\n🧩 Ensuring all Prometheus ConfigMaps exist...")
+
+    commands = [
+        # Main rules directory
+        "kubectl create configmap prometheus-rules "
+        "--from-file=module_3/alert_rules/ "
+        f"-n {K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -",
+
+        # Kubelet scrape config
+        "kubectl create configmap prometheus-kubernetes-kubelet "
+        "--from-file=module_3/k8s/prometheus/kubernetes-kubelet.yaml "
+        f"-n {K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -",
+
+        # cAdvisor scrape config
+        "kubectl create configmap prometheus-kubernetes-cadvisor "
+        "--from-file=module_3/k8s/prometheus/kubernetes-cadvisor.yaml "
+        f"-n {K8S_NAMESPACE} --dry-run=client -o yaml | kubectl apply -f -",
+    ]
+
+    for cmd in commands:
+        run_command(cmd, check=False)
+
+    print("✅ All required ConfigMaps verified or created.\n")
 
 
 def deploy_module_3():
@@ -105,12 +132,18 @@ def deploy_module_3():
     # Namespace
     run_command("kubectl apply -f module_3/k8s/namespace.yaml")
 
+    # Prometheus ServiceAccount + RBAC
+    run_command("kubectl apply -f module_3/k8s/prometheus/serviceaccount.yaml")
+
     # Alertmanager secrets
     run_command("kubectl apply -f module_3/k8s/alertmanager/secret.yaml")
 
     # ConfigMaps
     run_command("kubectl apply -f module_3/k8s/prometheus/configmap.yaml")
     run_command("kubectl apply -f module_3/k8s/alertmanager/configmap.yaml")
+
+    # Ensure Prometheus has all supporting ConfigMaps
+    ensure_prometheus_configmaps()
 
     # Deployments & Services
     run_command("kubectl apply -f module_3/k8s/prometheus/deployment.yaml")

@@ -1,46 +1,49 @@
 # =========================================
-# ✅ Final Dockerfile (Module 5 – Fault Injector, Stable Prometheus Version)
+# ✅ Final Dockerfile (Module 5 – Fault Injector, Stable & Safe Build)
 # =========================================
 
-# Base lightweight Python image
+# 🐍 Base lightweight Python image
 FROM python:3.12-slim
 
 # Set working directory inside container
 WORKDIR /app
+
+# -------------------------------------------------
+# 1️⃣ Install dependencies (system + Python)
+# -------------------------------------------------
 USER root
 
-# -------------------------------------------------
-# 1️⃣ Install dependencies (build-time only)
-# -------------------------------------------------
+# Copy dependency file early for Docker layer caching
 COPY module_5/requirements.txt ./requirements.txt
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gcc build-essential ca-certificates gnupg stress-ng \
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        curl gcc build-essential ca-certificates gnupg procps iputils-ping stress-ng \
     && pip install --no-cache-dir -r requirements.txt prometheus_client flask \
     \
-    # 🧩 Install kubectl (latest stable release)
+    # 🧩 Install latest kubectl safely
     && KUBECTL_VERSION="$(curl -L -s https://dl.k8s.io/release/stable.txt)" \
     && curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl" \
     && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
     && rm kubectl \
     \
-    # 🧹 Cleanup unnecessary files to reduce image size
+    # 🧹 Cleanup to minimize image size
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # -------------------------------------------------
-# 2️⃣ Copy module files (relative to repo root)
+# 2️⃣ Copy application files
 # -------------------------------------------------
 COPY module_5/app ./app
 COPY module_5/scripts ./scripts
 COPY module_5/policies.yaml ./policies.yaml
 
 # -------------------------------------------------
-# 3️⃣ Expose metrics port (Prometheus)
+# 3️⃣ Expose metrics port for Prometheus scraping
 # -------------------------------------------------
 EXPOSE 9090
 
 # -------------------------------------------------
-# 4️⃣ Create inline metrics server (must run as root)
+# 4️⃣ Inline lightweight metrics server
 # -------------------------------------------------
 RUN printf '%s\n' \
 "from flask import Flask, Response" \
@@ -60,12 +63,12 @@ RUN printf '%s\n' \
 > /app/metrics_server.py
 
 # -------------------------------------------------
-# 5️⃣ Create non-root user for runtime and set ownership
+# 5️⃣ Secure runtime: non-root user setup
 # -------------------------------------------------
 RUN useradd -m faultinjectoruser && chown -R faultinjectoruser /app
 USER faultinjectoruser
 
 # -------------------------------------------------
-# 6️⃣ Default entrypoint — start metrics + injector
+# 6️⃣ Default command (metrics + fault injector)
 # -------------------------------------------------
 CMD ["sh", "-c", "python /app/metrics_server.py & python /app/scripts/fault_injection.py"]

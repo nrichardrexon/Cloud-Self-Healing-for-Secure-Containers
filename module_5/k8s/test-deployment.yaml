@@ -1,4 +1,4 @@
-apiVersion: v1 
+apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
@@ -15,7 +15,8 @@ metadata:
   name: faultinjector-role
   namespace: monitoring
 rules:
-- apiGroups: [""]
+- apiGroups:
+  - ''
   resources:
   - pods
   - pods/exec
@@ -28,7 +29,8 @@ rules:
   - update
   - patch
   - watch
-- apiGroups: ["apps"]
+- apiGroups:
+  - apps
   resources:
   - deployments
   verbs:
@@ -54,12 +56,12 @@ subjects:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: faultinjector
-  namespace: monitoring
   labels:
     app: faultinjector
-    module: "5"
+    module: '5'
     phase: fault-injection
+  name: faultinjector
+  namespace: monitoring
 spec:
   replicas: 1
   selector:
@@ -71,35 +73,27 @@ spec:
         app: faultinjector
         managed-by: remediator
     spec:
-      serviceAccountName: faultinjector-sa
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
       containers:
-      - name: faultinjector
-        image: module5-faultinjector:latest
-        imagePullPolicy: IfNotPresent
+      - args:
+        - "echo \"\u2705 Fault Injector Ready: Running in 'monitoring' namespace (Module\
+          \ 5 integrated with Module 4 Remediator)\";\nwhile true; do\n  python3 /app/scripts/fault_injection.py;\n\
+          \  sleep 60;\ndone\n"
         command:
         - /bin/bash
         - -c
-        args:
-        - |
-          echo "✅ Fault Injector Ready: Running in 'monitoring' namespace (Module 5 integrated with Module 4 Remediator)";
-          while true; do
-            python3 /app/scripts/fault_injection.py;
-            sleep 60;
-          done
         env:
         - name: NAMESPACE
           value: monitoring
-        # <-- important: this now targets your sample app (Module 2)
         - name: LABEL_SELECTOR
           value: app=sample-app
         - name: PROMETHEUS_URL
           value: http://prometheus.monitoring.svc.cluster.local:9090
+        image: module5-faultinjector:latest
+        imagePullPolicy: IfNotPresent
+        name: faultinjector
         ports:
-        - name: metrics
-          containerPort: 9090
+        - containerPort: 9090
+          name: metrics
         resources:
           limits:
             cpu: 100m
@@ -109,6 +103,10 @@ spec:
             memory: 64Mi
         securityContext:
           allowPrivilegeEscalation: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      serviceAccountName: faultinjector-sa
 ---
 apiVersion: v1
 kind: Service
@@ -116,10 +114,10 @@ metadata:
   name: faultinjector
   namespace: monitoring
 spec:
-  type: ClusterIP
-  selector:
-    app: faultinjector
   ports:
   - name: metrics
     port: 9090
     targetPort: 9090
+  selector:
+    app: faultinjector
+  type: ClusterIP
