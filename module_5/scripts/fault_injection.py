@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 # ============================================
 # module_5/scripts/fault_injection.py  ✅ FINAL STABLE + SAFE EXIT + ROTATION + LOGFILE
 # ============================================
 
+import os
 import subprocess
 import time
 import shutil
@@ -15,16 +17,16 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 # ----------------------------------------------------
-# ⚙️ Configuration
+# ⚙️ Configuration (read selectable selector from env)
 # ----------------------------------------------------
-NAMESPACE = "monitoring"
-LABEL_SELECTOR = "app=faultinjector"
-METRICS_PORT = 9090
-RECHECK_INTERVAL = 300  # seconds (5 minutes)
-METRIC_RETENTION_LIMIT = 50  # retain only last 50 pods in memory
-LOG_FILE = Path("/tmp/faultinjector.log")
-LOG_SIZE_LIMIT = 1 * 1024 * 1024  # 1 MB
-LOG_BACKUP_COUNT = 3  # keep 3 rotated backups
+NAMESPACE = os.getenv("NAMESPACE", "monitoring")
+LABEL_SELECTOR = os.getenv("LABEL_SELECTOR", "app=sample-app")  # default -> sample-app (Module 2)
+METRICS_PORT = int(os.getenv("METRICS_PORT", "9090"))
+RECHECK_INTERVAL = int(os.getenv("RECHECK_INTERVAL", "300"))  # seconds (5 minutes)
+METRIC_RETENTION_LIMIT = int(os.getenv("METRIC_RETENTION_LIMIT", "50"))
+LOG_FILE = Path(os.getenv("LOG_FILE", "/tmp/faultinjector.log"))
+LOG_SIZE_LIMIT = int(os.getenv("LOG_SIZE_LIMIT", str(1 * 1024 * 1024)))  # 1 MB
+LOG_BACKUP_COUNT = int(os.getenv("LOG_BACKUP_COUNT", "3"))
 
 # ----------------------------------------------------
 # 🪵 Logging Setup
@@ -41,7 +43,7 @@ console = logging.StreamHandler(sys.stdout)
 console.setFormatter(formatter)
 logger.addHandler(console)
 
-logger.info("🧠 Fault Injector initialized with logfile rotation (1 MB limit).")
+logger.info("🧠 Fault Injector initialized with logfile rotation.")
 
 # ----------------------------------------------------
 # 📊 Health & Metrics State
@@ -129,6 +131,7 @@ def start_metrics_server():
             logger.warning(f"⚠️ Metrics server crashed: {e}. Restarting in 5s...")
             time.sleep(5)
 
+
 # ----------------------------------------------------
 # 🧹 Log Rotation & Cleanup
 # ----------------------------------------------------
@@ -143,6 +146,7 @@ def rotate_metrics():
             logger.info(f"🧹 Rotated metrics: kept last {METRIC_RETENTION_LIMIT} pods")
         time.sleep(600)
 
+
 # ----------------------------------------------------
 # 🧪 Fault Injection Logic
 # ----------------------------------------------------
@@ -151,11 +155,15 @@ def check_kubectl():
         logger.error("❌ 'kubectl' not found in PATH.")
         sys.exit(1)
 
-def run_command(cmd):
+def run_command(cmd, capture_stderr=True):
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    out = result.stdout.strip()
     if result.returncode != 0:
-        logger.warning(f"⚠️ Command failed: {cmd}\n{result.stderr.strip()}")
-    return result.stdout.strip()
+        err = result.stderr.strip()
+        if err:
+            logger.debug(f"Command stderr: {err}")
+        logger.warning(f"⚠️ Command failed: {cmd} (rc={result.returncode})")
+    return out
 
 def record_pod_metric(pod):
     if pod not in health_status["pod_metrics"]:
@@ -163,18 +171,27 @@ def record_pod_metric(pod):
     health_status["pod_metrics"][pod]["kill"] += 1
 
 def get_pods():
-    output = run_command(f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} -o name")
-    pods = [p.replace("pod/", "") for p in output.splitlines()]
+    # LABEL_SELECTOR might be like 'app=sample-app'
+    output = run_command(f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} -o name || true")
+    pods = [p.replace("pod/", "") for p in output.splitlines() if p.strip()]
     if not pods:
-        logger.warning("⚠️ No pods found with the given label.")
+        logger.warning(f"⚠️ No pods found with selector '{LABEL_SELECTOR}' in namespace '{NAMESPACE}'.")
     return pods
+
+def is_self_pod(pod_name: str) -> bool:
+    """Return True if pod is likely the injector itself (never target self)."""
+    low = pod_name.lower()
+    if "faultinjector" in low or "test-remediator" in low:
+        return True
+    # also skip pods that match the injector's service account label if any
+    return False
 
 def kill_pod(pod_name):
     logger.info(f"💥 Killing pod {pod_name}...")
-    run_command(f"kubectl delete pod {pod_name} -n {NAMESPACE}")
+    run_command(f"kubectl delete pod {pod_name} -n {NAMESPACE} --wait=false || true")
     health_status["kill_count"] += 1
     record_pod_metric(pod_name)
-    logger.info(f"✅ Pod {pod_name} deleted successfully.")
+    logger.info(f"✅ Pod {pod_name} deletion requested.")
 
 def inject_faults():
     check_kubectl()
@@ -185,15 +202,25 @@ def inject_faults():
     for pod in pods:
         if shutdown_flag:
             return
-        status = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'")
-        if status.lower() != "running":
+        # never target ourselves
+        if is_self_pod(pod):
+            logger.warning(f"⛔ Skipping self-targeting pod: {pod}")
+            continue
+
+        status = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}' || true")
+        if not status or status.lower() != "running":
             logger.warning(f"⚠️ Pod {pod} not running ({status}). Skipping.")
             continue
 
-        kill_pod(pod)
-        health_status["injections"] += 1
-        health_status["last_injection_time"] = time.time()
-        time.sleep(5)
+        try:
+            kill_pod(pod)
+            health_status["injections"] += 1
+            health_status["last_injection_time"] = time.time()
+            # small wait to allow kube to schedule alerts/rollouts
+            time.sleep(5)
+        except Exception as e:
+            logger.error(f"⚠️ Error killing {pod}: {e}")
+
 
 def run_continuous_loop():
     while not shutdown_flag:
@@ -207,6 +234,7 @@ def run_continuous_loop():
         logger.info(f"⏸️ Sleeping for {RECHECK_INTERVAL}s before next cycle...")
         time.sleep(RECHECK_INTERVAL)
 
+
 # ----------------------------------------------------
 # 🧨 Graceful Exit Handler
 # ----------------------------------------------------
@@ -219,12 +247,16 @@ def graceful_exit(signum, frame):
     logger.info(f"🧾 Summary: {health_status['injections']} injections | {health_status['kill_count']} kills | Uptime: {uptime}s")
     sys.exit(0)
 
+
 # ----------------------------------------------------
 # 🚀 Main Entrypoint
 # ----------------------------------------------------
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, graceful_exit)
     signal.signal(signal.SIGTERM, graceful_exit)
+
+    # log current config
+    logger.info(f"Config: NAMESPACE={NAMESPACE}, LABEL_SELECTOR={LABEL_SELECTOR}, METRICS_PORT={METRICS_PORT}")
 
     threading.Thread(target=start_metrics_server, daemon=True).start()
     threading.Thread(target=rotate_metrics, daemon=True).start()
