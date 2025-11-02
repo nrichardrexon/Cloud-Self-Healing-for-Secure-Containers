@@ -26,8 +26,8 @@ PROMETHEUS_URL = os.getenv(
 )
 LOG_FILE = Path(__file__).parent / "functional_test.log"
 
-# *** Updated to use faultinjector image/name ***
-EXPECTED_IMAGE = "faultinjector:latest"
+# *** Updated to match the image we load into kind/local cluster ***
+EXPECTED_IMAGE = "module5-faultinjector:latest"
 FAULTY_IMAGE = "busybox:nonexistent"
 PROMETHEUS_TIMEOUT = 90
 TARGET_CONTAINER = "faultinjector"
@@ -35,6 +35,9 @@ TARGET_CONTAINER = "faultinjector"
 STRESS_TESTER_NAME = "stress-tester"   # ephemeral pod used when stress binary missing
 STRESS_TESTER_IMAGE = "progrium/stress"  # small image with stress tool
 STRESS_TIMEOUT = 60  # seconds for stress runs when called from script
+
+# track whether we created the stress-tester so we only remove what we created
+_stress_tester_created = False
 
 # ========================
 # Logging setup
@@ -57,8 +60,8 @@ logging.getLogger().addHandler(console)
 # ========================
 # Helpers
 # ========================
-def run_command(cmd: str, check: bool = False, timeout: int = 60) -> str:
-    """Run a shell command and return stdout/stderr combined (trimmed)."""
+def run_command(cmd: str, check: bool = False, timeout: int = 120) -> str:
+    """Run a shell command and return stdout/stderr combined (trimmed). Longer default timeout."""
     logging.info(f"Running: {cmd}")
     try:
         result = subprocess.run(
@@ -80,7 +83,7 @@ def run_command(cmd: str, check: bool = False, timeout: int = 60) -> str:
 def kubectl_jsonpath_names(namespace: str = NAMESPACE) -> list:
     """Return list of pod names in namespace using jsonpath for reliability."""
     cmd = f"kubectl get pods -n {namespace} -o jsonpath='{{.items[*].metadata.name}}'"
-    out = run_command(cmd)
+    out = run_command(cmd, timeout=20)
     return [p for p in out.split() if p]
 
 
@@ -98,7 +101,7 @@ def get_dynamic_pod(prefix: str, namespace: str = NAMESPACE):
 
         # prefer Running pods
         for pod in matching:
-            phase = run_command(f"kubectl get pod {pod} -n {namespace} -o jsonpath='{{.status.phase}}'")
+            phase = run_command(f"kubectl get pod {pod} -n {namespace} -o jsonpath='{{.status.phase}}'", timeout=10)
             if phase == "Running":
                 logging.info(f"Found running pod for prefix '{prefix}': {pod}")
                 return pod
@@ -122,7 +125,7 @@ def wait_for_pods_ready(prefixes=("remediator", "faultinjector"), timeout=120):
             if not pod:
                 ok = False
                 break
-            phase = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'")
+            phase = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'", timeout=10)
             if phase != "Running":
                 ok = False
                 break
@@ -138,12 +141,13 @@ def wait_for_pods_ready(prefixes=("remediator", "faultinjector"), timeout=120):
 # Stress-tester management (fallback)
 # ========================
 def stress_tester_exists() -> bool:
-    out = run_command(f"kubectl get pod -n {NAMESPACE} {STRESS_TESTER_NAME} -o jsonpath='{{.status.phase}}' || true")
+    out = run_command(f"kubectl get pod -n {NAMESPACE} {STRESS_TESTER_NAME} -o jsonpath='{{.status.phase}}' || true", timeout=10)
     return bool(out and "Error from server" not in out)
 
 
 def create_stress_tester():
     """Create a small pod that has stress available and runs as root so it can stress other pods."""
+    global _stress_tester_created
     logging.info(f"Creating stress-tester pod '{STRESS_TESTER_NAME}' in {NAMESPACE} (if missing)")
     yaml = f"""
 apiVersion: v1
@@ -163,12 +167,13 @@ spec:
   restartPolicy: Never
 """
     run_command(f"kubectl apply -f - <<'YAML'\n{yaml}\nYAML", timeout=30)
+    _stress_tester_created = True
 
 
 def wait_for_stress_tester_ready(timeout=60):
     start = time.time()
     while time.time() - start < timeout:
-        phase = run_command(f"kubectl get pod -n {NAMESPACE} {STRESS_TESTER_NAME} -o jsonpath='{{.status.phase}}' || true")
+        phase = run_command(f"kubectl get pod -n {NAMESPACE} {STRESS_TESTER_NAME} -o jsonpath='{{.status.phase}}' || true", timeout=10)
         if phase == "Running":
             logging.info("Stress-tester pod is Running")
             return True
@@ -179,8 +184,13 @@ def wait_for_stress_tester_ready(timeout=60):
 
 
 def remove_stress_tester():
+    global _stress_tester_created
+    if not _stress_tester_created:
+        logging.info("Stress-tester was not created by this script; skipping removal.")
+        return
     logging.info("Cleaning up stress-tester pod (if exists)")
     run_command(f"kubectl delete pod -n {NAMESPACE} {STRESS_TESTER_NAME} --ignore-not-found", timeout=20)
+    _stress_tester_created = False
 
 
 def pod_has_stress(pod: str) -> bool:
@@ -203,11 +213,11 @@ def exec_via_stress_tester(args: str, timeout: int = 120) -> str:
 # ========================
 # Fault injection functions
 # ========================
-def _exec_with_retries(cmd, retries=3, delay=2):
+def _exec_with_retries(cmd, retries=3, delay=2, timeout=120):
     """Exec shell cmd with small retry loop. Return output or last error text."""
     last = ""
     for attempt in range(1, retries + 1):
-        last = run_command(cmd, timeout=30)
+        last = run_command(cmd, timeout=timeout)
         if last and "not found" not in last and "Error from server" not in last and "command terminated with exit code 127" not in last:
             return last
         logging.debug(f"Attempt {attempt} failed or command not present; retrying in {delay}s")
@@ -219,7 +229,7 @@ def cpu_stress(pod, duration=60, workers=2):
     """Inject CPU stress — try inside target pod, else use stress-tester pod."""
     logging.info(f"⚡ Injecting CPU stress into {pod} for {duration}s")
     cmd = f"kubectl exec -n {NAMESPACE} {pod} -- /bin/sh -c \"stress --cpu {workers} --timeout {duration}\""
-    out = _exec_with_retries(cmd)
+    out = _exec_with_retries(cmd, timeout=duration + 30)
     if out and "command terminated with exit code 127" not in out and "not found" not in out:
         logging.info(f"CPU stress executed inside {pod}")
         return out
@@ -227,7 +237,7 @@ def cpu_stress(pod, duration=60, workers=2):
     # fallback: use stress-tester (container has stress)
     logging.info("stress missing in target pod — falling back to stress-tester pod")
     try:
-        return exec_via_stress_tester(f"stress --cpu {workers} --timeout {duration}", timeout=duration + 30)
+        return exec_via_stress_tester(f"stress --cpu {workers} --timeout {duration}", timeout=duration + 60)
     except Exception as e:
         logging.error(f"Failed to run stress via stress-tester: {e}")
         return ""
@@ -237,14 +247,14 @@ def memory_stress(pod, duration=60, size_mb=100):
     """Inject memory stress — try inside target pod, else use stress-tester pod."""
     logging.info(f"⚡ Injecting memory stress into {pod} for {duration}s ({size_mb}MB)")
     cmd = f"kubectl exec -n {NAMESPACE} {pod} -- /bin/sh -c \"stress --vm 1 --vm-bytes {size_mb}M --timeout {duration}\""
-    out = _exec_with_retries(cmd)
+    out = _exec_with_retries(cmd, timeout=duration + 30)
     if out and "command terminated with exit code 127" not in out and "not found" not in out:
         logging.info(f"Memory stress executed inside {pod}")
         return out
 
     logging.info("stress missing in target pod — falling back to stress-tester pod")
     try:
-        return exec_via_stress_tester(f"stress --vm 1 --vm-bytes {size_mb}M --timeout {duration}", timeout=duration + 30)
+        return exec_via_stress_tester(f"stress --vm 1 --vm-bytes {size_mb}M --timeout {duration}", timeout=duration + 60)
     except Exception as e:
         logging.error(f"Failed to run memory stress via stress-tester: {e}")
         return ""
@@ -253,9 +263,9 @@ def memory_stress(pod, duration=60, size_mb=100):
 def kill_main_process(pod):
     """Kill main Python process in target pod."""
     logging.info(f"⚡ Killing main process inside {pod}")
-    pid = run_command(f"kubectl exec -n {NAMESPACE} {pod} -- pgrep -o python3 || true")
+    pid = run_command(f"kubectl exec -n {NAMESPACE} {pod} -- pgrep -o python3 || true", timeout=10)
     if pid and pid.strip().isdigit():
-        run_command(f"kubectl exec -n {NAMESPACE} {pod} -- kill -9 {pid.strip()}")
+        run_command(f"kubectl exec -n {NAMESPACE} {pod} -- kill -9 {pid.strip()}", timeout=10)
         logging.info(f"Killed PID {pid.strip()} in {pod}")
     else:
         logging.warning(f"No python process found in {pod}")
@@ -264,7 +274,7 @@ def kill_main_process(pod):
 def deploy_faulty_image():
     """Deploy broken image to test faultinjector recovery (now uses faultinjector deployment)."""
     logging.info("⚡ Deploying faulty image to faultinjector")
-    run_command(f"kubectl set image deployment/faultinjector {TARGET_CONTAINER}={FAULTY_IMAGE} -n {NAMESPACE}")
+    run_command(f"kubectl set image deployment/faultinjector {TARGET_CONTAINER}={FAULTY_IMAGE} -n {NAMESPACE}", timeout=30)
 
 
 # ========================
@@ -327,13 +337,13 @@ def validate_remediator():
         logging.error("No running faultinjector pod found")
         return False
 
-    image = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.spec.containers[0].image}}'")
+    image = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.spec.containers[0].image}}'", timeout=10)
     if image != EXPECTED_IMAGE:
         logging.error(f"Wrong image detected for {pod}: {image}")
         return False
 
-    desired = run_command(f"kubectl get deployment faultinjector -n {NAMESPACE} -o jsonpath='{{.spec.replicas}}'")
-    ready = run_command(f"kubectl get deployment faultinjector -n {NAMESPACE} -o jsonpath='{{.status.readyReplicas}}'")
+    desired = run_command(f"kubectl get deployment faultinjector -n {NAMESPACE} -o jsonpath='{{.spec.replicas}}'", timeout=10)
+    ready = run_command(f"kubectl get deployment faultinjector -n {NAMESPACE} -o jsonpath='{{.status.readyReplicas}}'", timeout=10)
     if desired != ready:
         logging.error(f"Replica mismatch: desired={desired} ready={ready}")
         return False
@@ -384,7 +394,7 @@ def run_functional_tests():
     # 4️⃣ Optionally report monitoring pod status
     for label, pod in {"cadvisor": cadvisor_pod, "kubelet": kubelet_pod, "faultinjector": faultinjector_pod}.items():
         if pod:
-            phase = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'")
+            phase = run_command(f"kubectl get pod {pod} -n {NAMESPACE} -o jsonpath='{{.status.phase}}'", timeout=10)
             logging.info(f"ℹ️ {label} pod {pod} status: {phase}")
 
     # cleanup stress-tester if created (leave if you want to reuse)

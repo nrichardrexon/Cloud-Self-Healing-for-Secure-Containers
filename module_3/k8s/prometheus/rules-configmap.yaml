@@ -1,0 +1,78 @@
+apiVersion: v1
+data:
+  alert_rules.yml: "groups:\n- name: app.rules\n  rules:\n  # ----------------------------\n
+    \ # ⚠️ Module 1 Container Restarts\n  # ----------------------------\n  - alert:
+    Module1ContainerRestart\n    expr: rate(kube_pod_container_status_restarts_total{namespace=\"default\",
+    pod=~\"sample-app.*\"}[5m]) > 0\n    for: 1m\n    labels:\n      severity: warning\n
+    \     action: restart\n    annotations:\n      summary: \"Module 1 Pod {{ $labels.pod
+    }} is restarting\"\n      description: \"Container is restarting frequently in
+    Module 1 namespace. Trigger auto-restart.\"\n\n  # ----------------------------\n
+    \ # ⚠️ Module 2 Container Restarts\n  # ----------------------------\n  - alert:
+    Module2ContainerRestart\n    expr: rate(kube_pod_container_status_restarts_total{namespace=\"default\",
+    pod=~\"module-2-sample-app.*\"}[5m]) > 0\n    for: 1m\n    labels:\n      severity:
+    warning\n      action: restart\n    annotations:\n      summary: \"Module 2 Pod
+    {{ $labels.pod }} is restarting\"\n      description: \"Container is restarting
+    frequently in Module 2 namespace. Trigger auto-restart.\"\n\n  # ----------------------------\n
+    \ # ⚙️ Module 5 FaultInjector Container Restarts\n  # ----------------------------\n
+    \ - alert: Module5ContainerRestart\n    expr: rate(kube_pod_container_status_restarts_total{namespace=\"monitoring\",
+    pod=~\".*faultinjector.*\"}[5m]) > 0\n    for: 1m\n    labels:\n      severity:
+    warning\n      action: restart\n    annotations:\n      summary: \"Module 5 FaultInjector
+    Pod {{ $labels.pod }} is restarting\"\n      description: \"Container is restarting
+    frequently in Module 5 namespace. Trigger auto-restart.\"\n\n  # ----------------------------\n
+    \ # \U0001F525 High CPU Usage (all monitored pods)\n  # ----------------------------\n
+    \ - alert: HighCPUUsage\n    expr: sum by (pod, namespace) (rate(container_cpu_usage_seconds_total[2m]))\n
+    \         / sum by (pod, namespace) (kube_pod_container_resource_limits_cpu_cores)
+    > 0.8\n    for: 2m\n    labels:\n      severity: critical\n      action: scale\n
+    \   annotations:\n      summary: \"Pod {{ $labels.pod }} high CPU usage\"\n      description:
+    \"CPU usage >80% of requested cores for pod {{ $labels.pod }}. Trigger horizontal
+    scale-up.\"\n\n  # ----------------------------\n  # \U0001F9E0 High Memory Usage
+    (all monitored pods)\n  # ----------------------------\n  - alert: HighMemoryUsage\n
+    \   expr: sum by (pod, namespace) (container_memory_usage_bytes)\n          /
+    sum by (pod, namespace) (kube_pod_container_resource_limits_memory_bytes) > 0.8\n
+    \   for: 2m\n    labels:\n      severity: critical\n      action: scale\n    annotations:\n
+    \     summary: \"Pod {{ $labels.pod }} high memory usage\"\n      description:
+    \"Memory usage >80% of memory limit for pod {{ $labels.pod }}. Trigger horizontal
+    scale-up.\"\n\n  # ----------------------------\n  # ❌ Failing Readiness (all
+    monitored pods)\n  # ----------------------------\n  - alert: ReadinessProbeFailing\n
+    \   expr: kube_pod_container_status_ready{condition=\"false\"} == 1\n    for:
+    2m\n    labels:\n      severity: warning\n      action: restart\n    annotations:\n
+    \     summary: \"Pod {{ $labels.pod }} readiness probe failing\"\n      description:
+    \"Readiness probe failing for pod {{ $labels.pod }}. Trigger restart.\"\n\n  #
+    ----------------------------\n  # \U0001F6A8 Deployment Failure (all monitored
+    deployments)\n  # ----------------------------\n  - alert: DeploymentFailure\n
+    \   expr: kube_deployment_status_replicas_unavailable > 0\n    for: 3m\n    labels:\n
+    \     severity: critical\n      action: rollback\n    annotations:\n      summary:
+    \"Deployment {{ $labels.deployment }} failing\"\n      description: \"Unhealthy
+    deployment detected. Trigger rollback to previous stable version.\"\n\n  # ----------------------------\n
+    \ # \U0001F9E9 Module 1 Metrics Endpoint Down\n  # ----------------------------\n
+    \ - alert: Module1MetricsEndpointDown\n    expr: absent(up{job=\"module-1-app\"}
+    == 1)\n    for: 1m\n    labels:\n      severity: critical\n      action: restart\n
+    \   annotations:\n      summary: \"Module 1 metrics endpoint unreachable\"\n      description:
+    \"Prometheus cannot scrape /metrics from Module 1 app. Trigger pod restart.\"\n\n
+    \ # ----------------------------\n  # \U0001F9E9 Module 2 Metrics Endpoint Down\n
+    \ # ----------------------------\n  - alert: Module2MetricsEndpointDown\n    expr:
+    absent(up{job=\"module-2-app\"} == 1)\n    for: 1m\n    labels:\n      severity:
+    critical\n      action: restart\n    annotations:\n      summary: \"Module 2 metrics
+    endpoint unreachable\"\n      description: \"Prometheus cannot scrape /metrics
+    from Module 2 app. Trigger pod restart.\"\n\n  # ----------------------------\n
+    \ # \U0001F9E9 Module 5 Metrics Endpoint Down\n  # ----------------------------\n
+    \ - alert: Module5MetricsEndpointDown\n    expr: absent(up{job=\"faultinjector\"}
+    == 1)\n    for: 1m\n    labels:\n      severity: critical\n      action: restart\n
+    \   annotations:\n      summary: \"Module 5 metrics endpoint unreachable\"\n      description:
+    \"Prometheus cannot scrape /metrics from Module 5 fault injector. Trigger pod
+    restart.\"\n\n    # ----------------------------\n  # \U0001F480 Container Crash\n
+    \ # ----------------------------\n  - alert: ContainerCrash\n    expr: increase(kube_pod_container_status_terminated_reason{reason=\"Error\"}[1m])
+    > 0\n    for: 30s\n    labels:\n      severity: critical\n      action: restart\n
+    \   annotations:\n      summary: \"Pod {{ $labels.pod }} crashed\"\n      description:
+    \"Container in pod {{ $labels.pod }} has terminated unexpectedly. Trigger restart.\"\n\n
+    \ # ----------------------------\n  # \U0001F9F1 Deployment Failed (Improved Expression)\n
+    \ # ----------------------------\n  - alert: DeploymentFailed\n    expr: kube_deployment_status_condition{condition=\"Progressing\",status=\"false\"}
+    == 1\n    for: 1m\n    labels:\n      severity: critical\n      action: rollback\n
+    \   annotations:\n      summary: \"Deployment {{ $labels.deployment }} failed
+    to progress\"\n      description: \"Deployment is not progressing. Trigger rollback
+    to previous stable version.\"\n\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: prometheus-rules
+  namespace: monitoring

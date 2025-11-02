@@ -22,7 +22,7 @@ def main():
     # Python
     run("python --version", "Python Version")
     run("which python", "Python Path")
-    run("ls -l app/smain.py", "App File Check")
+    run("ls -l app/main.py", "App File Check")  # ✅ corrected path
 
     # Docker
     run("docker --version", "Docker Version")

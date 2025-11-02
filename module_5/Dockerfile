@@ -1,5 +1,5 @@
-# =========================================
-# ✅ Final Dockerfile (Module 5 – Fault Injector, Stable & Safe Build)
+# ========================================= 
+# ✅ FINAL DOCKERFILE — Module 5: Fault Injector (Stable & Safe Build)
 # =========================================
 
 # 🐍 Base lightweight Python image
@@ -18,7 +18,15 @@ COPY module_5/requirements.txt ./requirements.txt
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        curl gcc build-essential ca-certificates gnupg procps iputils-ping stress-ng \
+        curl \
+        gcc \
+        build-essential \
+        ca-certificates \
+        gnupg \
+        procps \
+        iputils-ping \
+        stress \
+        stress-ng \
     && pip install --no-cache-dir -r requirements.txt prometheus_client flask \
     \
     # 🧩 Install latest kubectl safely

@@ -1,168 +1,212 @@
-# =========================================
-# ✅ Module 5 – Fault Injector Deployment Script (Final Fixed Version)
-# =========================================
+#!/usr/bin/env python3
+"""
+Module 5 – Fault Injector Deployment Script
+Cloud Self-Healing for Secure Containers
+"""
 
-import subprocess
 import os
-import sys
+import subprocess
 import time
-import yaml
-from pathlib import Path
+import logging
 
-# -------------------------------------------------
-# Constants & Paths
-# -------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent
-MODULE5_DIR = BASE_DIR / "module_5"
-DEPLOYMENT_YAML = MODULE5_DIR / "k8s" / "test-deployment.yaml"
-LOCAL_IMAGE = "module5-faultinjector:latest"
-KIND_CLUSTER_NAME = "selfhealing-cluster"
+# --------------------------------------------
+# Basic Config
+# --------------------------------------------
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+BASE_DIR = "/workspaces/Cloud-Self-Healing-for-Secure-Containers/module_5"
+POSSIBLE_DEPLOYMENTS = [
+    os.path.join(BASE_DIR, "k8s/test-deployment.yaml"),
+    os.path.join(BASE_DIR, "k8s/faultinjector-deployment.yaml"),
+    os.path.join(BASE_DIR, "k8s/faultinjector-deployment.yml"),
+]
+DOCKERFILE_PATH = os.path.join(BASE_DIR, "Dockerfile")
+IMAGE_NAME = "module5-faultinjector:latest"
+CLUSTER_NAME = "selfhealing-cluster"
 NAMESPACE = "monitoring"
-LABEL_SELECTOR = "app=faultinjector"
 
-# -------------------------------------------------
-# Utility function
-# -------------------------------------------------
-def run_command(cmd, check=True):
-    print(f"\nRunning: {cmd}")
+
+# --------------------------------------------
+# Utility Functions
+# --------------------------------------------
+def run_command(cmd: str, check: bool = False, timeout: int = 120) -> str:
+    """Run a shell command and return stdout/stderr combined (trimmed)."""
+    logging.info(f"⚙️  Running: {cmd}")
     try:
         result = subprocess.run(
-            cmd, shell=True, text=True, capture_output=True, check=check
+            cmd, shell=True, check=check, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout
         )
-        if result.stdout:
-            print(result.stdout.strip())
-        if result.stderr and not check:
-            print(result.stderr.strip())
-        return result.stdout.strip()
+        out = result.stdout.strip()
+        if out:
+            logging.info(out)
+        return out
     except subprocess.CalledProcessError as e:
-        print(f"⚠️ Command failed:\n{e.output}")
-        if check:
-            sys.exit(1)
-        return ""
+        logging.error(f"❌ Command failed ({cmd}):\n{e.output}")
+        return e.output.strip() if e.output else ""
+    except subprocess.TimeoutExpired:
+        logging.error(f"⏰ Command timed out ({cmd}) after {timeout}s")
+        return "timeout"
 
-# -------------------------------------------------
-# Kind cluster helpers
-# -------------------------------------------------
-def is_kind_installed():
-    return run_command("kind --version", check=False) != ""
 
-def install_kind():
-    print("Installing Kind in ~/bin...")
-    run_command("mkdir -p ~/bin")
-    run_command("curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64")
-    run_command("chmod +x ./kind && mv ./kind ~/bin/")
-    bashrc_path = os.path.expanduser("~/.bashrc")
-    with open(bashrc_path, "a") as f:
-        f.write("\nexport PATH=$HOME/bin:$PATH\n")
-    os.environ["PATH"] = f"{os.path.expanduser('~/bin')}:" + os.environ["PATH"]
-    print("✅ Kind installed. PATH updated.")
+def _exec_with_retries(cmd, retries=3, delay=2, timeout=120):
+    """Exec shell cmd with retry loop and dynamic timeout."""
+    last = ""
+    for attempt in range(1, retries + 1):
+        last = run_command(cmd, timeout=timeout)
+        if last and "not found" not in last and "Error from server" not in last:
+            return last
+        logging.debug(f"Attempt {attempt}/{retries} failed; retrying in {delay}s...")
+        time.sleep(delay)
+    return last
 
-def create_kind_cluster():
-    clusters = run_command("kind get clusters", check=False).splitlines()
-    if KIND_CLUSTER_NAME in clusters:
-        print("✅ Kind cluster already exists.")
-        return
-    print(f"Creating Kind cluster '{KIND_CLUSTER_NAME}'...")
-    run_command(f"kind create cluster --name {KIND_CLUSTER_NAME} --wait 60s")
-    print("✅ Kind cluster ready.")
 
-def load_image_into_kind():
-    print(f"📦 Loading {LOCAL_IMAGE} into Kind cluster...")
-    run_command(f"kind load docker-image {LOCAL_IMAGE} --name {KIND_CLUSTER_NAME}")
-    print("✅ Image loaded into Kind cluster.")
+# --------------------------------------------
+# Step 1 – Pre-checks
+# --------------------------------------------
+def check_stress_ng():
+    logging.info("\n🧩 Checking if 'stress-ng' is installed ...\n")
+    out = run_command("which stress-ng", timeout=10)
+    if not out or "stress-ng" not in out:
+        logging.info("⚠️  stress-ng not found on deploy host.")
+        logging.info("If needed, install manually: sudo apt-get install -y stress-ng")
+    else:
+        logging.info(f"✅ stress-ng already installed at {out}")
 
-# -------------------------------------------------
-# Cleanup old pods and ReplicaSets
-# -------------------------------------------------
+
+def check_kind_cluster():
+    logging.info("\n⚙️  Checking Kind cluster...\n")
+    run_command("kind --version", timeout=10)
+    clusters = run_command("kind get clusters", timeout=10)
+    if CLUSTER_NAME not in clusters:
+        logging.info(f"⚠️  Cluster '{CLUSTER_NAME}' not found. Creating...")
+        run_command(f"kind create cluster --name {CLUSTER_NAME}", check=True, timeout=300)
+    else:
+        logging.info(f"✅ Kind cluster '{CLUSTER_NAME}' already exists.")
+
+
+# --------------------------------------------
+# Step 2 – Cleanup
+# --------------------------------------------
 def cleanup_old_resources():
-    print("🗑 Cleaning up old pods and ReplicaSets...")
-    pods = run_command(f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} -o name", check=False)
-    if pods:
+    logging.info("🗑 Cleaning up old pods and ReplicaSets ...\n")
+    pods = run_command(f"kubectl get pods -l app=faultinjector -n {NAMESPACE} -o name", timeout=20)
+    if pods and "No resources" not in pods:
         for pod in pods.splitlines():
-            run_command(f"kubectl delete {pod} -n {NAMESPACE}", check=False)
-
-    replicasets = run_command(f"kubectl get rs -l {LABEL_SELECTOR} -n {NAMESPACE} -o name", check=False)
-    if replicasets:
+            run_command(f"kubectl delete {pod} -n {NAMESPACE} --ignore-not-found", timeout=30)
+    replicasets = run_command(f"kubectl get rs -l app=faultinjector -n {NAMESPACE} -o name", timeout=20)
+    if replicasets and "No resources" not in replicasets:
         for rs in replicasets.splitlines():
-            run_command(f"kubectl delete {rs} -n {NAMESPACE}", check=False)
-    print("✅ Old resources cleaned up.")
+            run_command(f"kubectl delete {rs} -n {NAMESPACE} --ignore-not-found", timeout=30)
+    logging.info("✅ Old resources cleaned up.")
 
-# -------------------------------------------------
-# Build Docker image from repo root
-# -------------------------------------------------
-def build_local_image():
-    print(f"🛠 Building local image {LOCAL_IMAGE} with correct build context...")
-    repo_root = BASE_DIR
-    dockerfile_path = MODULE5_DIR / "Dockerfile"
-    cmd = f"docker build -t {LOCAL_IMAGE} -f {dockerfile_path} {repo_root}"
-    run_command(cmd)
 
-# -------------------------------------------------
-# Patch Deployment YAML
-# -------------------------------------------------
-def patch_deployment_for_local_image():
-    print("➡ Patching Deployment YAML for local image usage...")
-    with open(DEPLOYMENT_YAML, "r") as f:
-        deployment_docs = list(yaml.safe_load_all(f))
+# --------------------------------------------
+# Step 3 – Build + Load Image
+# --------------------------------------------
+def build_and_load_image():
+    logging.info(f"🛠 Building local image {IMAGE_NAME} ...\n")
+    context_dir = "/workspaces/Cloud-Self-Healing-for-Secure-Containers"
+    run_command(f"docker build -t {IMAGE_NAME} -f {DOCKERFILE_PATH} {context_dir}", check=True, timeout=900)
+    logging.info("✅ Docker image built successfully.")
+    run_command(f"kind load docker-image {IMAGE_NAME} --name {CLUSTER_NAME}", check=True, timeout=120)
+    logging.info("✅ Image loaded into Kind cluster.")
 
-    for doc in deployment_docs:
-        if doc.get("kind") == "Deployment":
-            for container in doc["spec"]["template"]["spec"]["containers"]:
-                container["image"] = LOCAL_IMAGE
-                container["imagePullPolicy"] = "IfNotPresent"
 
-    with open(DEPLOYMENT_YAML, "w") as f:
-        yaml.safe_dump_all(deployment_docs, f)
+# --------------------------------------------
+# Step 4 – Patch Deployment
+# --------------------------------------------
+def choose_deployment_yaml():
+    for p in POSSIBLE_DEPLOYMENTS:
+        if os.path.exists(p):
+            logging.info(f"Using deployment file: {p}")
+            return p
+    raise FileNotFoundError(f"None of expected deployment files found. Tried: {POSSIBLE_DEPLOYMENTS}")
 
-    print("✅ Deployment YAML patched.")
 
-# -------------------------------------------------
-# Apply K8s Deployment
-# -------------------------------------------------
-def apply_k8s_resources():
-    print("🚀 Applying Kubernetes resources...")
-    run_command(f"kubectl apply -f {DEPLOYMENT_YAML}")
+def patch_deployment_for_local_image(deployment_yaml):
+    logging.info("➡️  Patching Deployment YAML for local image usage ...")
+    with open(deployment_yaml, "r") as f:
+        lines = f.readlines()
 
-# -------------------------------------------------
-# Wait for pod readiness
-# -------------------------------------------------
-def wait_for_pods():
-    print("⏳ Waiting for pods to be ready...")
-    for _ in range(12):  # 1 min timeout
-        time.sleep(5)
-        status = run_command(
-            f"kubectl get pods -l {LABEL_SELECTOR} -n {NAMESPACE} "
-            "-o jsonpath='{.items[*].status.containerStatuses[*].ready}'",
-            check=False
-        )
-        if "true" in status.lower():
-            print("✅ All pods are ready!")
-            return
+    patched = []
+    for line in lines:
+        if line.strip().startswith("image:"):
+            indent = line[: line.index("image:")]
+            patched.append(f"{indent}image: {IMAGE_NAME}\n")
         else:
-            print("⏳ Pods not ready yet. Retrying...")
-    print("❌ Pods failed to become ready in time. Check logs manually.")
+            patched.append(line)
 
-# -------------------------------------------------
-# Main Routine
-# -------------------------------------------------
+    with open(deployment_yaml, "w") as f:
+        f.writelines(patched)
+
+    logging.info("✅ Deployment YAML patched for local image.")
+
+
+# --------------------------------------------
+# Step 5 – Deploy to Kubernetes
+# --------------------------------------------
+def deploy_to_k8s(deployment_yaml):
+    logging.info("\n🚀 Deploying Fault Injector to Kubernetes...\n")
+    run_command(f"kubectl apply -f {deployment_yaml} -n {NAMESPACE}", check=True, timeout=120)
+    time.sleep(3)
+    run_command(f"kubectl get pods -n {NAMESPACE}", timeout=20)
+    logging.info("✅ Fault Injector deployment applied.")
+
+
+# --------------------------------------------
+# Step 6 – Apply Prometheus Monitoring Add-ons
+# --------------------------------------------
+def apply_monitoring_addons():
+    logging.info("\n📡 Applying Prometheus monitoring components...\n")
+
+    _exec_with_retries("kubectl apply -f module_3/k8s/prometheus/kube-state-metrics.yaml", retries=3, delay=3)
+    _exec_with_retries("kubectl apply -f module_3/k8s/prometheus/node-exporter.yaml", retries=3, delay=3)
+
+    run_command("kubectl get pods -n monitoring -l app=kube-state-metrics", timeout=20)
+    run_command("kubectl get pods -n monitoring -l app=node-exporter", timeout=20)
+
+    logging.info("✅ Prometheus add-ons deployed successfully.")
+
+
+# --------------------------------------------
+# Step 7 – Verify Image + Pod State
+# --------------------------------------------
+def verify_post_deployment():
+    logging.info("\n🔍 Verifying Fault Injector Deployment...\n")
+    run_command(f"kubectl get pods -n {NAMESPACE} -l app=faultinjector", timeout=20)
+    run_command(f"kubectl describe pod -n {NAMESPACE} -l app=faultinjector | grep Image", timeout=20)
+    logging.info("✅ Verification complete. Fault Injector active and visible to Prometheus.")
+
+
+# --------------------------------------------
+# Step 8 – Main Deploy Function
+# --------------------------------------------
 def deploy_module_5():
-    print("\n============================================")
-    print("🚀 Starting Module 5 – Fault Injector Deployment")
-    print("============================================")
+    logging.info("\n============================================")
+    logging.info("🚀 Starting Module 5 – Fault Injector Deployment")
+    logging.info("============================================\n")
 
-    if not is_kind_installed():
-        install_kind()
-
-    create_kind_cluster()
+    check_stress_ng()
+    check_kind_cluster()
     cleanup_old_resources()
-    build_local_image()
-    load_image_into_kind()
-    patch_deployment_for_local_image()
-    apply_k8s_resources()
-    wait_for_pods()
+    build_and_load_image()
 
-    print("\n✅ Module 5 deployment complete.")
+    deployment_yaml = choose_deployment_yaml()
+    patch_deployment_for_local_image(deployment_yaml)
+    deploy_to_k8s(deployment_yaml)
 
-# -------------------------------------------------
+    apply_monitoring_addons()
+    verify_post_deployment()
+
+    logging.info("\n✅ Module 5 deployment complete. (Functional tests not run here.)\n")
+
+
+# --------------------------------------------
+# Entrypoint
+# --------------------------------------------
 if __name__ == "__main__":
-    deploy_module_5()
+    try:
+        deploy_module_5()
+    except Exception as e:
+        logging.error(f"❌ Deployment failed: {e}")
+        exit(1)

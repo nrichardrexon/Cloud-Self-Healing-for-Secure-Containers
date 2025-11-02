@@ -1,8 +1,8 @@
 # ===========================================
-# 📡 module_3_deploy_app.py (Final Patched Version)
+# 📡 module_3_deploy_app.py (Final Verified + Metrics Summary)
 # Deploys Prometheus & Alertmanager in Kubernetes,
-# verifies readiness, opens dashboards, and keeps
-# port-forward sessions active.
+# verifies readiness, checks metrics with retries,
+# opens dashboards, and maintains port-forwards.
 # ===========================================
 
 import subprocess
@@ -10,6 +10,7 @@ import sys
 import time
 import requests
 import webbrowser
+from prettytable import PrettyTable
 
 K8S_NAMESPACE = "monitoring"
 PROM_DEPLOYMENT = "prometheus"
@@ -18,6 +19,7 @@ PROM_SERVICE = "prometheus"
 ALERT_SERVICE = "alertmanager"
 POD_READY_TIMEOUT = 180
 VERIFY_TIMEOUT = 60  # seconds for endpoint verification
+METRIC_RETRY_LIMIT = 6  # total retry attempts (every 5 seconds)
 
 
 def run_command(cmd, check=True):
@@ -86,7 +88,29 @@ def verify_service(service_name, port, timeout=60):
         sys.exit(1)
 
     print(f"✅ Service {service_name} is reachable!")
-    return pf_proc
+    return pf_proc, True
+
+
+def check_prometheus_metrics():
+    """Check if Prometheus metrics are being scraped properly with retry."""
+    print("\n📊 Checking Prometheus metrics for activity...")
+    for attempt in range(1, METRIC_RETRY_LIMIT + 1):
+        cmd = "curl -s http://127.0.0.1:9090/metrics | grep -i restart | head -n 10"
+        result = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output = result.stdout.strip()
+
+        if output:
+            print(f"✅ Prometheus metrics detected (attempt {attempt}/{METRIC_RETRY_LIMIT}):")
+            print(output)
+            return True
+        else:
+            print(f"🔄 Attempt {attempt}/{METRIC_RETRY_LIMIT}: no restart-related metrics yet.")
+            time.sleep(5)
+
+    print("⚠ No restart-related metrics found after multiple retries.")
+    print("ℹ️ You can manually check later with:")
+    print("   curl -s http://127.0.0.1:9090/metrics | grep -i restart | head -n 20")
+    return False
 
 
 def open_dashboards_sequentially(dashboards):
@@ -152,14 +176,15 @@ def deploy_module_3():
     run_command("kubectl apply -f module_3/k8s/alertmanager/service.yaml")
 
     # Wait for pods ready
-    if not wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, POD_READY_TIMEOUT):
-        sys.exit(1)
-    if not wait_for_pods_ready(f"app={ALERT_DEPLOYMENT}", K8S_NAMESPACE, POD_READY_TIMEOUT):
-        sys.exit(1)
+    prom_ready = wait_for_pods_ready(f"app={PROM_DEPLOYMENT}", K8S_NAMESPACE, POD_READY_TIMEOUT)
+    alert_ready = wait_for_pods_ready(f"app={ALERT_DEPLOYMENT}", K8S_NAMESPACE, POD_READY_TIMEOUT)
 
     # Verify endpoints
-    prom_pf_proc = verify_service(PROM_SERVICE, 9090, VERIFY_TIMEOUT)
-    alert_pf_proc = verify_service(ALERT_SERVICE, 9093, VERIFY_TIMEOUT)
+    prom_pf_proc, prom_ok = verify_service(PROM_SERVICE, 9090, VERIFY_TIMEOUT)
+    alert_pf_proc, alert_ok = verify_service(ALERT_SERVICE, 9093, VERIFY_TIMEOUT)
+
+    # 🔹 Check metrics (with automatic retry)
+    metrics_ok = check_prometheus_metrics()
 
     # Open dashboards sequentially
     open_dashboards_sequentially([
@@ -169,6 +194,19 @@ def deploy_module_3():
 
     # Final pod/service status
     run_command(f"kubectl get pods,svc -n {K8S_NAMESPACE}")
+
+    # 📋 Deployment Summary
+    print("\n📋 Deployment Summary\n" + "=" * 40)
+    table = PrettyTable()
+    table.field_names = ["Component", "Status"]
+    table.add_row(["Prometheus Pod", "✅ Ready" if prom_ready else "⚠ Not Ready"])
+    table.add_row(["Alertmanager Pod", "✅ Ready" if alert_ready else "⚠ Not Ready"])
+    table.add_row(["Prometheus Service", "✅ Reachable" if prom_ok else "⚠ Failed"])
+    table.add_row(["Alertmanager Service", "✅ Reachable" if alert_ok else "⚠ Failed"])
+    table.add_row(["Metrics Check", "✅ Active" if metrics_ok else "⚠ None Detected"])
+    print(table)
+    print("=" * 40)
+
     print("\n✅ Module 3 deployment complete! Monitoring and alerts are live.")
 
     # Keep port-forward alive

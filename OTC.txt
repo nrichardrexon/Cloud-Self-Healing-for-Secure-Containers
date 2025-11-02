@@ -5,3 +5,27 @@ kubectl apply -f module_5/k8s/test-deployment.yaml -n monitoring
 kubectl logs -n monitoring -l app=faultinjector --tail=50 -f
 
 
+bash module_3/k8s/prometheus/reload_rules.sh
+
+ kubectl set image deployment/faultinjector faultinjector=module5-faultinjector:latest -n monitoring
+
+ 🛠 Fix
+
+You just need to load your image into the Kind cluster:
+
+docker build -t module5-faultinjector:latest -f module_5/app/Dockerfile .
+kind load docker-image module5-faultinjector:latest --name selfhealing-cluster
+
+
+Then reapply the deployment to make sure it uses the image:
+
+kubectl apply -f module_5/k8s/faultinjector-deployment.yaml
+
+
+And verify:
+
+kubectl get pods -n monitoring -l app=faultinjector
+kubectl describe pod -n monitoring -l app=faultinjector | grep Image
+
+kubectl apply -f module_3/k8s/prometheus/kube-state-metrics.yaml
+kubectl apply -f module_3/k8s/prometheus/node-exporter.yaml

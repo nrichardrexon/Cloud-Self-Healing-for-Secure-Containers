@@ -7,9 +7,10 @@ metadata:
     app: stress-tester
 spec:
   containers:
-    - name: stress
-      image: progrium/stress
-      command: ["sleep", "3600"]
+    - name: stress-tester
+      # 🔄 Use same image built from Module 5 Dockerfile
+      image: your-dockerhub-username/cloud-selfhealing-module5:latest
+      command: ["sh", "-c", "stress-ng --cpu 2 --vm 2 --vm-bytes 256M --timeout 60s --metrics-brief"]
       securityContext:
         runAsUser: 0
         allowPrivilegeEscalation: true
